@@ -438,6 +438,18 @@ class StorageAPI(object):
         return self.storage.find_domains(
             context, criterion, marker, limit, sort_key, sort_dir)
 
+    def find_domains_custom(self, context, criterion=None, marker=None, limit=None,
+                     sort_key=None, sort_dir=None):
+        """
+        Find Domains
+
+        :param context: RPC Context.
+        :param criterion: Criteria to filter by.
+        """
+        return self.storage.find_domains_custom(
+            context, criterion, marker, limit, sort_key, sort_dir)
+
+
     def find_domain(self, context, criterion):
         """
         Find a single Domain.
