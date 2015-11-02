@@ -59,7 +59,8 @@ def create_domain():
 def get_domains():
     context = flask.request.environ.get('context')
 
-    domains = central_api.find_domains(context)
+    # Modified this line to link properly to needed function.
+    domains = central_api.find_domains_custom(context)
 
     return flask.jsonify(domains_schema.filter({'domains': domains}))
 
