@@ -559,8 +559,16 @@ class SQLAlchemyStorage(base.Storage):
 
         return dict(domain)
 
-    # Modified the new function to used here _find_domains to _find_domains_custom
     def find_domains(self, context, criterion=None,
+                     marker=None, limit=None, sort_key=None, sort_dir=None):
+        domains = self._find_domains(context, criterion, marker=marker,
+                                     limit=limit, sort_key=sort_key,
+                                     sort_dir=sort_dir)
+
+        return [dict(d) for d in domains]
+
+    # new function added to avoid conflict and proper working
+    def find_domains_custom(self, context, criterion=None,
                      marker=None, limit=None, sort_key=None, sort_dir=None):
         domains = self._find_domains_custom(context, criterion, marker=marker,
                                      limit=limit, sort_key=sort_key,
