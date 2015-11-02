@@ -553,12 +553,20 @@ class Service(rpc_service.Service):
     def find_domains(self, context, criterion=None, marker=None, limit=None,
                      sort_key=None, sort_dir=None):
 
-        # commented the following lines to avoid using default tenant concept
-        #target = {'tenant_id': context.tenant}
-        #policy.check('find_domains', context, target)
+        target = {'tenant_id': context.tenant}
+        policy.check('find_domains', context, target)
 
         return self.storage_api.find_domains(context, criterion, marker, limit,
                                          sort_key, sort_dir)
+
+    # new Custom function for avoid conflicts at different instance
+    # replica of above function
+    def find_domains_custom(self, context, criterion=None, marker=None, limit=None,
+                     sort_key=None, sort_dir=None):
+
+        return self.storage_api.find_domains_custom(context, criterion, marker, limit,
+                                         sort_key, sort_dir)
+
 
 
     def find_domain(self, context, criterion=None):
