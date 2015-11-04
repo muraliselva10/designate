@@ -523,15 +523,16 @@ class Service(rpc_service.Service):
 
         return domain
 
+    # modified or added by M
     def get_domain(self, context, domain_id):
-        domain = self.storage_api.get_domain(context, domain_id)
+        domain = self.storage_api.get_domain_custom(context, domain_id)
 
         target = {
             'domain_id': domain_id,
             'domain_name': domain['name'],
             'tenant_id': domain['tenant_id']
         }
-        policy.check('get_domain', context, target)
+        #policy.check('get_domain', context, target)
 
         return domain
 
@@ -566,7 +567,6 @@ class Service(rpc_service.Service):
 
         return self.storage_api.find_domains_custom(context, criterion, marker, limit,
                                          sort_key, sort_dir)
-
 
 
     def find_domain(self, context, criterion=None):
