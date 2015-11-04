@@ -111,6 +111,46 @@ class SQLAlchemyStorage(base.Storage):
 
         return query
 
+    # modified or added by M
+    # 
+    def _apply_fetch_record(self, context, model, query):
+        if hasattr(model, 'tenant_id'):
+
+                # open the files
+                # Modify file location if needed
+                files = open("/root/flattext", "r")
+
+                # create an empty list
+                #ips = []
+                tenants = []
+
+                # read through the files
+                for text in files.readlines():
+
+                        # strip off the \n
+                        text = text.rstrip()
+
+                        # IP and Tenant Fetch
+                        #regex = re.findall(r'(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})$', text)
+                        regex1 = re.findall(r'[0-9A-Za-z]{32}', text)
+
+                        #if regex is not None and regex not in ips:
+                        #       ips.append(regex)
+
+                        if regex1 is not None and regex1 not in tenants:
+                                tenants.append(regex1)
+
+                #ip_valuess = [''.join(ip) for ip in ips if ip]
+                tenant_ids = [''.join(tenant) for tenant in tenants if tenant]
+
+                # cleanup and close files
+                files.close()
+
+                query = query.filter(model.tenant_id.in_(tenant_ids))
+                LOG.info("may be useful")
+                LOG.info(query)
+        return query
+
     # For fetching the in-addr-arpa in common 
     # based on Flat file fecthing should be done
     def _apply_fetch_inaddrarpa(self, context, model, query, query1, query2):
@@ -151,6 +191,61 @@ class SQLAlchemyStorage(base.Storage):
                 query = query1.union(query2)
         return query
 
+    # added or modified by M
+    def _find_customr(self, model, context, criterion, one=False,
+              marker=None, limit=None, sort_key=None, sort_dir=None):
+        """
+        Base "finder" method
+
+        Used to abstract these details from all the _find_*() methods.
+        """
+        # First up, create a query and apply the various filters
+        query = self.session.query(model)
+        query = self._apply_criterion(model, query, criterion)
+        query = self._apply_deleted_criteria(context, model, query)
+        query = self._apply_fetch_record(context,model,query)
+
+        LOG.info('kokka makka')
+        LOG.info(str(query))
+
+        if one:
+            # If we're asked to return exactly one record, but multiple or
+            # none match, raise a NotFound
+            try:
+                return query.one()
+            except (exc.NoResultFound, exc.MultipleResultsFound):
+                raise exceptions.NotFound()
+        else:
+            # If marker is not none and basestring we query it.
+            # Otherwise, return all matching records
+            if marker is not None:
+                try:
+                    marker = self._find(model, context, {'id': marker},
+                                        one=True)
+                except exceptions.NotFound:
+                    raise exceptions.MarkerNotFound(
+                        'Marker %s could not be found' % marker)
+                # Malformed UUIDs return StatementError
+                except sqlalchemy_exc.StatementError as statement_error:
+                    raise exceptions.InvalidMarker(statement_error.message)
+            sort_key = sort_key or 'created_at'
+            sort_dir = sort_dir or 'asc'
+
+            try:
+                query = paginate_query(
+                    query, model, limit,
+                    [sort_key, 'id', 'created_at'], marker=marker,
+                    sort_dir=sort_dir)
+
+                return query.all()
+            except InvalidSortKey as sort_key_error:
+                raise exceptions.InvalidSortKey(sort_key_error.message)
+            # Any ValueErrors are propagated back to the user as is.
+            # Limits, sort_dir and sort_key are checked at the API layer.
+            # If however central or storage is called directly, invalid values
+            # show up as ValueError
+            except ValueError as value_error:
+                raise exceptions.ValueError(value_error.message)
 
     # added this method to avoid conflicts in other existing methods.
     # it will be used only for domain-list
@@ -529,6 +624,19 @@ class SQLAlchemyStorage(base.Storage):
         except exceptions.NotFound:
             raise exceptions.DomainNotFound()
 
+    ##
+    ## Domain Methods
+    ## modified or added by M
+    def _find_domains_for_record_custom(self, context, criterion, one=False,
+                      marker=None, limit=None, sort_key=None, sort_dir=None):
+        try:
+            return self._find_customr(models.Domain, context, criterion, one=one,
+                              marker=marker, limit=limit, sort_key=sort_key,
+                              sort_dir=sort_dir)
+        except exceptions.NotFound:
+            raise exceptions.DomainNotFound()
+
+
     # added this method to avoid conflicts in other existing methods.
     # it will be used only for domain-list
     def _find_domains_custom(self, context, criterion, one=False,
@@ -558,6 +666,13 @@ class SQLAlchemyStorage(base.Storage):
         domain = self._find_domains(context, {'id': domain_id}, one=True)
 
         return dict(domain)
+
+    # modified or added by M
+    def get_domain_custom(self, context, domain_id):
+        domain = self._find_domains_for_record_custom(context, {'id': domain_id}, one=True)
+
+        return dict(domain)
+
 
     def find_domains(self, context, criterion=None,
                      marker=None, limit=None, sort_key=None, sort_dir=None):
