@@ -427,6 +427,18 @@ class StorageAPI(object):
         """
         return self.storage.get_domain(context, domain_id)
 
+    # custom get domain
+    # modified or added by M
+    def get_domain_custom(self, context, domain_id):
+        """
+        Get a Domain via its ID.
+
+        :param context: RPC Context.
+        :param domain_id: ID of the Domain.
+        """
+        return self.storage.get_domain_custom(context, domain_id)
+
+
     def find_domains(self, context, criterion=None, marker=None, limit=None,
                      sort_key=None, sort_dir=None):
         """
