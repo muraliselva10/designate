@@ -18,6 +18,8 @@ from designate.openstack.common import log as logging
 from designate import exceptions
 from designate import schema
 from designate.central import rpcapi as central_rpcapi
+import re
+import unicodedata
 
 LOG = logging.getLogger(__name__)
 central_api = central_rpcapi.CentralAPI()
@@ -84,11 +86,24 @@ def get_record_schema():
 def get_records_schema():
     return flask.jsonify(records_schema.raw)
 
+# Function for reversing IP string
+def reverse(ip):
+        if len(ip) <= 1:
+                return ip
+        l = ip.split('.')
+        return '.'.join(l[::-1])
 
 @blueprint.route('/domains/<uuid:domain_id>/records', methods=['POST'])
 def create_record(domain_id):
     context = flask.request.environ.get('context')
     values = flask.request.json
+
+    if "in-addr.arpa" in values['name'] and "PTR" in values['type']:
+        nameField = values['name']
+        nameField = str(nameField)
+        ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', nameField )
+        ip = ''.join(ip)
+        ip_reversed = reverse(ip)
 
     record_schema.validate(values)
 
