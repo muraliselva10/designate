@@ -98,6 +98,7 @@ class SQLAlchemyStorage(base.Storage):
             if context.all_tenants:
                 LOG.debug('Including all tenants items in query results')
             else:
+		LOG.info("thi sis unwanted one")
                 query = query.filter(model.tenant_id == context.tenant_id)
 
         return query
@@ -147,8 +148,7 @@ class SQLAlchemyStorage(base.Storage):
                 files.close()
 
                 query = query.filter(model.tenant_id.in_(tenant_ids))
-                LOG.info("may be useful")
-                LOG.info(query)
+		LOG.info(query)
         return query
 
     # For fetching the in-addr-arpa in common 
@@ -156,38 +156,38 @@ class SQLAlchemyStorage(base.Storage):
     def _apply_fetch_inaddrarpa(self, context, model, query, query1, query2):
         if hasattr(model, 'tenant_id'):
 
-                # open the files
-                # Modify file location if needed
-                files = open("/root/flattext", "r")
+		# open the files
+		# Modify file location if needed
+	        files = open("/root/flattext", "r")
 
-                # create an empty list
-                #ips = []
-                tenants = []
+	        # create an empty list
+	        #ips = []
+	        tenants = []
 
-                # read through the files
-                for text in files.readlines():
+	        # read through the files
+	        for text in files.readlines():
 
-                        # strip off the \n
-                        text = text.rstrip()
+	                # strip off the \n
+	                text = text.rstrip()
 
-                        # IP and Tenant Fetch
-                        #regex = re.findall(r'(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})$', text)
-                        regex1 = re.findall(r'[0-9A-Za-z]{32}', text)
+	                # IP and Tenant Fetch
+	                #regex = re.findall(r'(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})$', text)
+	                regex1 = re.findall(r'[0-9A-Za-z]{32}', text)
 
-                        #if regex is not None and regex not in ips:
-                        #       ips.append(regex)
+	                #if regex is not None and regex not in ips:
+	                #       ips.append(regex)
 
-                        if regex1 is not None and regex1 not in tenants:
-                                tenants.append(regex1)
+	                if regex1 is not None and regex1 not in tenants:
+	                        tenants.append(regex1)
 
-                #ip_valuess = [''.join(ip) for ip in ips if ip]
-                tenant_ids = [''.join(tenant) for tenant in tenants if tenant]
+		#ip_valuess = [''.join(ip) for ip in ips if ip]
+		tenant_ids = [''.join(tenant) for tenant in tenants if tenant]
 
-                # cleanup and close files
-                files.close()
+        	# cleanup and close files
+        	files.close()
 
                 query1 = query1.filter(model.name == "in-addr.arpa.")
-                query2 = query2.filter(model.tenant_id.in_(tenant_ids))
+		query2 = query2.filter(model.tenant_id.in_(tenant_ids))
                 query = query1.union(query2)
         return query
 
@@ -204,9 +204,9 @@ class SQLAlchemyStorage(base.Storage):
         query = self._apply_criterion(model, query, criterion)
         query = self._apply_deleted_criteria(context, model, query)
         query = self._apply_fetch_record(context,model,query)
-
-        LOG.info('kokka makka')
-        LOG.info(str(query))
+	
+	LOG.info('kokka makka')
+	LOG.info(str(query))
 
         if one:
             # If we're asked to return exactly one record, but multiple or
@@ -311,6 +311,8 @@ class SQLAlchemyStorage(base.Storage):
 
         Used to abstract these details from all the _find_*() methods.
         """
+
+	LOG.info("Should not be here")
         # First up, create a query and apply the various filters
         query = self.session.query(model)
         query = self._apply_criterion(model, query, criterion)
@@ -618,7 +620,7 @@ class SQLAlchemyStorage(base.Storage):
     def _find_domains(self, context, criterion, one=False,
                       marker=None, limit=None, sort_key=None, sort_dir=None):
         try:
-            return self._find(models.Domain, context, criterion, one=one,
+            return self._find_customr(models.Domain, context, criterion, one=one,
                               marker=marker, limit=limit, sort_key=sort_key,
                               sort_dir=sort_dir)
         except exceptions.NotFound:
@@ -722,6 +724,7 @@ class SQLAlchemyStorage(base.Storage):
 
         return query.count()
 
+    # Modified or added by M
     # RecordSet Methods
     def _find_recordsets(self, context, criterion, one=False,
                          marker=None, limit=None, sort_key=None,
@@ -796,6 +799,7 @@ class SQLAlchemyStorage(base.Storage):
 
         return query.count()
 
+    # Modified or added by M
     # Record Methods
     def _find_records(self, context, criterion, one=False,
                       marker=None, limit=None, sort_key=None, sort_dir=None):
@@ -807,6 +811,27 @@ class SQLAlchemyStorage(base.Storage):
             raise exceptions.RecordNotFound()
 
     def create_record(self, context, domain_id, recordset_id, values):
+        # Fetch the domain as we need the tenant_id
+        domain = self._find_domains_for_record_custom(context, {'id': domain_id}, one=True)
+
+        record = models.Record()
+
+        # Create and populate the new Record model
+        record = models.Record()
+        record.update(values)
+        record.tenant_id = domain['tenant_id']
+        record.domain_id = domain_id
+        record.recordset_id = recordset_id
+
+        try:
+            # Save the new Record model
+            record.save(self.session)
+        except exceptions.Duplicate:
+            raise exceptions.DuplicateRecord()
+
+        return dict(record)
+
+    def create_recordi_ptr(self, context, domain_id, recordset_id, values):
         # Fetch the domain as we need the tenant_id
         domain = self._find_domains(context, {'id': domain_id}, one=True)
 
@@ -826,7 +851,6 @@ class SQLAlchemyStorage(base.Storage):
             raise exceptions.DuplicateRecord()
 
         return dict(record)
-
     def find_records(self, context, criterion=None,
                      marker=None, limit=None, sort_key=None, sort_dir=None):
         records = self._find_records(
