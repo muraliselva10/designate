@@ -720,10 +720,11 @@ class Service(rpc_service.Service):
 
         return recordset
 
+    # Modified or added by M
     def find_recordsets(self, context, criterion=None, marker=None, limit=None,
                         sort_key=None, sort_dir=None):
-        target = {'tenant_id': context.tenant_id}
-        policy.check('find_recordsets', context, target)
+        #target = {'tenant_id': context.tenant_id}
+        #policy.check('find_recordsets', context, target)
 
         return self.storage_api.find_recordsets(context, criterion, marker,
                                                 limit, sort_key, sort_dir)
