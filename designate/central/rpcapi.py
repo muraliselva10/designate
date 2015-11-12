@@ -13,20 +13,14 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-from oslo_config import cfg
-from oslo_log import log as logging
-import oslo_messaging as messaging
-
-from designate.i18n import _LI
-from designate import rpc
-
+from oslo.config import cfg
+from designate.openstack.common import log as logging
+from designate.openstack.common.rpc import proxy as rpc_proxy
 
 LOG = logging.getLogger(__name__)
 
-CENTRAL_API = None
 
-
-class CentralAPI(object):
+class CentralAPI(rpc_proxy.RpcProxy):
     """
     Client side of the central RPC API.
 
@@ -42,540 +36,462 @@ class CentralAPI(object):
         3.1 - Add floating ip ptr methods
         3.2 - TLD Api changes
         3.3 - Add methods for blacklisted domains
-        4.0 - Create methods now accept designate objects
-        4.1 - Add methods for server pools
-        4.2 - Add methods for pool manager integration
-        4.3 - Added Zone Transfer Methods
-        5.0 - Remove dead server code
-        5.1 - Add xfr_domain
-        5.2 - Add Zone Import methods
-        5.3 - Add Zone Export method
-        5.4 - Add asynchronous Zone Export methods
-        5.5 - Add deleted zone purging task
-        5.6 - Changed 'purge_domains' function args
     """
-    RPC_API_VERSION = '5.6'
-
     def __init__(self, topic=None):
         topic = topic if topic else cfg.CONF.central_topic
-
-        target = messaging.Target(topic=topic, version=self.RPC_API_VERSION)
-        self.client = rpc.get_client(target, version_cap='5.6')
-
-    @classmethod
-    def get_instance(cls):
-        """
-        The rpc.get_client() which is called upon the API object initialization
-        will cause a assertion error if the designate.rpc.TRANSPORT isn't setup
-        by rpc.init() before.
-
-        This fixes that by creating the rpcapi when demanded.
-        """
-        global CENTRAL_API
-        if not CENTRAL_API:
-            CENTRAL_API = cls()
-        return CENTRAL_API
+        super(CentralAPI, self).__init__(topic=topic, default_version='3.0')
 
     # Misc Methods
     def get_absolute_limits(self, context):
-        LOG.info(_LI("get_absolute_limits: "
-                     "Calling central's get_absolute_limits."))
+        LOG.info("get_absolute_limits: Calling central's get_absolute_limits.")
+        msg = self.make_msg('get_absolute_limits')
 
-        return self.client.call(context, 'get_absolute_limits')
+        return self.call(context, msg)
 
     # Quota Methods
     def get_quotas(self, context, tenant_id):
-        LOG.info(_LI("get_quotas: Calling central's get_quotas."))
+        LOG.info("get_quotas: Calling central's get_quotas.")
+        msg = self.make_msg('get_quotas', tenant_id=tenant_id)
 
-        return self.client.call(context, 'get_quotas', tenant_id=tenant_id)
+        return self.call(context, msg)
 
     def get_quota(self, context, tenant_id, resource):
-        LOG.info(_LI("get_quota: Calling central's get_quota."))
+        LOG.info("get_quota: Calling central's get_quota.")
+        msg = self.make_msg('get_quota', tenant_id=tenant_id,
+                            resource=resource)
 
-        return self.client.call(context, 'get_quota', tenant_id=tenant_id,
-                                resource=resource)
+        return self.call(context, msg)
 
     def set_quota(self, context, tenant_id, resource, hard_limit):
-        LOG.info(_LI("set_quota: Calling central's set_quota."))
+        LOG.info("set_quota: Calling central's set_quota.")
+        msg = self.make_msg('set_quota', tenant_id=tenant_id,
+                            resource=resource, hard_limit=hard_limit)
 
-        return self.client.call(context, 'set_quota', tenant_id=tenant_id,
-                                resource=resource, hard_limit=hard_limit)
+        return self.call(context, msg)
 
     def reset_quotas(self, context, tenant_id):
-        LOG.info(_LI("reset_quotas: Calling central's reset_quotas."))
+        LOG.info("reset_quotas: Calling central's reset_quotas.")
+        msg = self.make_msg('reset_quotas', tenant_id=tenant_id)
 
-        return self.client.call(context, 'reset_quotas', tenant_id=tenant_id)
+        return self.call(context, msg)
+
+    # Server Methods
+    def create_server(self, context, values):
+        LOG.info("create_server: Calling central's create_server.")
+        msg = self.make_msg('create_server', values=values)
+
+        return self.call(context, msg)
+
+    def find_servers(self, context, criterion=None, marker=None, limit=None,
+                     sort_key=None, sort_dir=None):
+        LOG.info("find_servers: Calling central's find_servers.")
+        msg = self.make_msg('find_servers', criterion=criterion, marker=marker,
+                            limit=limit, sort_key=sort_key, sort_dir=sort_dir)
+
+        return self.call(context, msg)
+
+    def get_server(self, context, server_id):
+        LOG.info("get_server: Calling central's get_server.")
+        msg = self.make_msg('get_server', server_id=server_id)
+
+        return self.call(context, msg)
+
+    def update_server(self, context, server_id, values):
+        LOG.info("update_server: Calling central's update_server.")
+        msg = self.make_msg('update_server', server_id=server_id,
+                            values=values)
+
+        return self.call(context, msg)
+
+    def delete_server(self, context, server_id):
+        LOG.info("delete_server: Calling central's delete_server.")
+        msg = self.make_msg('delete_server', server_id=server_id)
+
+        return self.call(context, msg)
 
     # TSIG Key Methods
-    def create_tsigkey(self, context, tsigkey):
-        LOG.info(_LI("create_tsigkey: Calling central's create_tsigkey."))
-        return self.client.call(context, 'create_tsigkey', tsigkey=tsigkey)
+    def create_tsigkey(self, context, values):
+        LOG.info("create_tsigkey: Calling central's create_tsigkey.")
+        msg = self.make_msg('create_tsigkey', values=values)
+
+        return self.call(context, msg)
 
     def find_tsigkeys(self, context, criterion=None, marker=None, limit=None,
                       sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_tsigkeys: Calling central's find_tsigkeys."))
-        return self.client.call(context, 'find_tsigkeys', criterion=criterion,
-                                marker=marker, limit=limit, sort_key=sort_key,
-                                sort_dir=sort_dir)
+        LOG.info("find_tsigkeys: Calling central's find_tsigkeys.")
+        msg = self.make_msg('find_tsigkeys', criterion=criterion,
+                            marker=marker, limit=limit, sort_key=sort_key,
+                            sort_dir=sort_dir)
+
+        return self.call(context, msg)
 
     def get_tsigkey(self, context, tsigkey_id):
-        LOG.info(_LI("get_tsigkey: Calling central's get_tsigkey."))
-        return self.client.call(context, 'get_tsigkey', tsigkey_id=tsigkey_id)
+        LOG.info("get_tsigkey: Calling central's get_tsigkey.")
+        msg = self.make_msg('get_tsigkey', tsigkey_id=tsigkey_id)
 
-    def update_tsigkey(self, context, tsigkey):
-        LOG.info(_LI("update_tsigkey: Calling central's update_tsigkey."))
-        return self.client.call(context, 'update_tsigkey', tsigkey=tsigkey)
+        return self.call(context, msg)
+
+    def update_tsigkey(self, context, tsigkey_id, values):
+        LOG.info("update_tsigkey: Calling central's update_tsigkey.")
+        msg = self.make_msg('update_tsigkey', tsigkey_id=tsigkey_id,
+                            values=values)
+
+        return self.call(context, msg)
 
     def delete_tsigkey(self, context, tsigkey_id):
-        LOG.info(_LI("delete_tsigkey: Calling central's delete_tsigkey."))
-        return self.client.call(context, 'delete_tsigkey',
-                                tsigkey_id=tsigkey_id)
+        LOG.info("delete_tsigkey: Calling central's delete_tsigkey.")
+        msg = self.make_msg('delete_tsigkey', tsigkey_id=tsigkey_id)
+
+        return self.call(context, msg)
 
     # Tenant Methods
     def find_tenants(self, context):
-        LOG.info(_LI("find_tenants: Calling central's find_tenants."))
-        return self.client.call(context, 'find_tenants')
+        LOG.info("find_tenants: Calling central's find_tenants.")
+        msg = self.make_msg('find_tenants')
+
+        return self.call(context, msg)
 
     def get_tenant(self, context, tenant_id):
-        LOG.info(_LI("get_tenant: Calling central's get_tenant."))
-        return self.client.call(context, 'get_tenant', tenant_id=tenant_id)
+        LOG.info("get_tenant: Calling central's get_tenant.")
+        msg = self.make_msg('get_tenant', tenant_id=tenant_id)
+
+        return self.call(context, msg)
 
     def count_tenants(self, context):
-        LOG.info(_LI("count_tenants: Calling central's count_tenants."))
-        return self.client.call(context, 'count_tenants')
+        LOG.info("count_tenants: Calling central's count_tenants.")
+        msg = self.make_msg('count_tenants')
+
+        return self.call(context, msg)
 
     # Domain Methods
-    def create_domain(self, context, domain):
-        LOG.info(_LI("create_domain: Calling central's create_domain."))
-        return self.client.call(context, 'create_domain', domain=domain)
+    def create_domain(self, context, values):
+        LOG.info("create_domain: Calling central's create_domain.")
+        msg = self.make_msg('create_domain', values=values)
+
+        return self.call(context, msg)
 
     def get_domain(self, context, domain_id):
-        LOG.info(_LI("get_domain: Calling central's get_domain."))
-        return self.client.call(context, 'get_domain', domain_id=domain_id)
+        LOG.info("get_domain: Calling central's get_domain.")
+        msg = self.make_msg('get_domain', domain_id=domain_id)
+
+        return self.call(context, msg)
 
     def get_domain_servers(self, context, domain_id):
-        LOG.info(_LI("get_domain_servers: "
-                     "Calling central's get_domain_servers."))
-        return self.client.call(context, 'get_domain_servers',
-                                domain_id=domain_id)
+        LOG.info("get_domain_servers: Calling central's get_domain_servers.")
+        msg = self.make_msg('get_domain_servers', domain_id=domain_id)
+
+        return self.call(context, msg)
+
+    def find_domains_custom(self, context, criterion=None, marker=None, limit=None,
+                     sort_key=None, sort_dir=None):
+        LOG.info("find_domains: Calling central's find_domains.")
+        msg = self.make_msg('find_domains_custom', criterion=criterion, marker=marker,
+                            limit=limit, sort_key=sort_key, sort_dir=sort_dir)
+
+        return self.call(context, msg)
 
     def find_domains(self, context, criterion=None, marker=None, limit=None,
                      sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_domains: Calling central's find_domains."))
-        return self.client.call(context, 'find_domains', criterion=criterion,
-                                marker=marker, limit=limit, sort_key=sort_key,
-                                sort_dir=sort_dir)
+        LOG.info("find_domains: Calling central's find_domains.")
+        msg = self.make_msg('find_domains', criterion=criterion, marker=marker,
+                            limit=limit, sort_key=sort_key, sort_dir=sort_dir)
+
+        return self.call(context, msg)
 
     def find_domain(self, context, criterion=None):
-        LOG.info(_LI("find_domain: Calling central's find_domain."))
-        return self.client.call(context, 'find_domain', criterion=criterion)
+        LOG.info("find_domain: Calling central's find_domain.")
+        msg = self.make_msg('find_domain', criterion=criterion)
 
-    def update_domain(self, context, domain, increment_serial=True):
-        LOG.info(_LI("update_domain: Calling central's update_domain."))
-        return self.client.call(context, 'update_domain', domain=domain,
-                                increment_serial=increment_serial)
+        return self.call(context, msg)
+
+    def update_domain(self, context, domain_id, values, increment_serial=True):
+        LOG.info("update_domain: Calling central's update_domain.")
+        msg = self.make_msg('update_domain',
+                            domain_id=domain_id,
+                            values=values,
+                            increment_serial=increment_serial)
+
+        return self.call(context, msg)
 
     def delete_domain(self, context, domain_id):
-        LOG.info(_LI("delete_domain: Calling central's delete_domain."))
-        return self.client.call(context, 'delete_domain', domain_id=domain_id)
+        LOG.info("delete_domain: Calling central's delete_domain.")
+        msg = self.make_msg('delete_domain', domain_id=domain_id)
 
-    def purge_domains(self, context, criterion, limit=None):
-        LOG.info(_LI(
-            "purge_domains: Calling central's purge_domains."
-        ))
-        cctxt = self.client.prepare(version='5.6')
-        return cctxt.call(context, 'purge_domains',
-                          criterion=criterion, limit=limit)
+        return self.call(context, msg)
 
     def count_domains(self, context, criterion=None):
-        LOG.info(_LI("count_domains: Calling central's count_domains."))
-        return self.client.call(context, 'count_domains', criterion=criterion)
+        LOG.info("count_domains: Calling central's count_domains.")
+        msg = self.make_msg('count_domains', criterion=criterion)
+
+        return self.call(context, msg)
 
     def touch_domain(self, context, domain_id):
-        LOG.info(_LI("touch_domain: Calling central's touch_domain."))
-        return self.client.call(context, 'touch_domain', domain_id=domain_id)
+        LOG.info("touch_domain: Calling central's touch_domain.")
+        msg = self.make_msg('touch_domain', domain_id=domain_id)
+
+        return self.call(context, msg)
 
     # TLD Methods
-    def create_tld(self, context, tld):
-        LOG.info(_LI("create_tld: Calling central's create_tld."))
-        return self.client.call(context, 'create_tld', tld=tld)
+    def create_tld(self, context, values):
+        LOG.info("create_tld: Calling central's create_tld.")
+        msg = self.make_msg('create_tld', values=values)
+
+        return self.call(context, msg, version='3.2')
 
     def find_tlds(self, context, criterion=None, marker=None, limit=None,
                   sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_tlds: Calling central's find_tlds."))
-        return self.client.call(context, 'find_tlds', criterion=criterion,
-                                marker=marker, limit=limit, sort_key=sort_key,
-                                sort_dir=sort_dir)
+        LOG.info("find_tlds: Calling central's find_tlds.")
+        msg = self.make_msg('find_tlds', criterion=criterion, marker=marker,
+                            limit=limit, sort_key=sort_key, sort_dir=sort_dir)
+
+        return self.call(context, msg, version='3.2')
 
     def get_tld(self, context, tld_id):
-        LOG.info(_LI("get_tld: Calling central's get_tld."))
-        return self.client.call(context, 'get_tld', tld_id=tld_id)
+        LOG.info("get_tld: Calling central's get_tld.")
+        msg = self.make_msg('get_tld', tld_id=tld_id)
 
-    def update_tld(self, context, tld):
-        LOG.info(_LI("update_tld: Calling central's update_tld."))
-        return self.client.call(context, 'update_tld', tld=tld)
+        return self.call(context, msg, version='3.2')
+
+    def update_tld(self, context, tld_id, values):
+        LOG.info("update_tld: Calling central's update_tld.")
+        msg = self.make_msg('update_tld', tld_id=tld_id, values=values)
+
+        return self.call(context, msg, version='3.2')
 
     def delete_tld(self, context, tld_id):
-        LOG.info(_LI("delete_tld: Calling central's delete_tld."))
-        return self.client.call(context, 'delete_tld', tld_id=tld_id)
+        LOG.info("delete_tld: Calling central's delete_tld.")
+        msg = self.make_msg('delete_tld', tld_id=tld_id)
+
+        return self.call(context, msg, version='3.2')
 
     # RecordSet Methods
-    def create_recordset(self, context, domain_id, recordset):
-        LOG.info(_LI("create_recordset: Calling central's create_recordset."))
-        return self.client.call(context, 'create_recordset',
-                                domain_id=domain_id, recordset=recordset)
+    def create_recordset(self, context, domain_id, values):
+        LOG.info("create_recordset: Calling central's create_recordset.")
+        msg = self.make_msg('create_recordset',
+                            domain_id=domain_id,
+                            values=values)
+
+        return self.call(context, msg)
+
+    # RecordSet Methods
+    # modified or added by M
+    def create_recordset_ptr(self, context, domain_id, values):
+        LOG.info("create_recordset_ptr: Calling central's create_recordset.")
+        msg = self.make_msg('create_recordset_ptr',
+                            domain_id=domain_id,
+                            values=values)
+
+        return self.call(context, msg)
+
 
     def get_recordset(self, context, domain_id, recordset_id):
-        LOG.info(_LI("get_recordset: Calling central's get_recordset."))
-        return self.client.call(context, 'get_recordset', domain_id=domain_id,
-                                recordset_id=recordset_id)
+        LOG.info("get_recordset: Calling central's get_recordset.")
+        msg = self.make_msg('get_recordset',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id)
+
+        return self.call(context, msg)
 
     def find_recordsets(self, context, criterion=None, marker=None, limit=None,
                         sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_recordsets: Calling central's find_recordsets."))
-        return self.client.call(context, 'find_recordsets',
-                                criterion=criterion, marker=marker,
-                                limit=limit, sort_key=sort_key,
-                                sort_dir=sort_dir)
+        LOG.info("find_recordsets: Calling central's find_recordsets.")
+        msg = self.make_msg('find_recordsets', criterion=criterion,
+                            marker=marker, limit=limit, sort_key=sort_key,
+                            sort_dir=sort_dir)
+
+        return self.call(context, msg)
 
     def find_recordset(self, context, criterion=None):
-        LOG.info(_LI("find_recordset: Calling central's find_recordset."))
-        return self.client.call(context, 'find_recordset', criterion=criterion)
+        LOG.info("find_recordset: Calling central's find_recordset.")
+        msg = self.make_msg('find_recordset', criterion=criterion)
 
-    def export_zone(self, context, zone_id):
-        LOG.info(_LI("export_zone: Calling central's export_zone."))
-        return self.client.call(context, 'export_zone', zone_id=zone_id)
+        return self.call(context, msg)
 
-    def update_recordset(self, context, recordset, increment_serial=True):
-        LOG.info(_LI("update_recordset: Calling central's update_recordset."))
-        return self.client.call(context, 'update_recordset',
-                                recordset=recordset,
-                                increment_serial=increment_serial)
+    # modified or added by M
+    def find_recordset_ptr(self, context, criterion=None):
+        LOG.info("find_recordset_ptr: Calling central's find_recordset.")
+        msg = self.make_msg('find_recordset_ptr', criterion=criterion)
+
+        return self.call(context, msg)
+
+
+    def update_recordset(self, context, domain_id, recordset_id, values,
+                         increment_serial=True):
+        LOG.info("update_recordset: Calling central's update_recordset.")
+        msg = self.make_msg('update_recordset',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id,
+                            values=values,
+                            increment_serial=increment_serial)
+
+        return self.call(context, msg)
 
     def delete_recordset(self, context, domain_id, recordset_id,
                          increment_serial=True):
-        LOG.info(_LI("delete_recordset: Calling central's delete_recordset."))
-        return self.client.call(context, 'delete_recordset',
-                                domain_id=domain_id,
-                                recordset_id=recordset_id,
-                                increment_serial=increment_serial)
+        LOG.info("delete_recordset: Calling central's delete_recordset.")
+        msg = self.make_msg('delete_recordset',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id,
+                            increment_serial=increment_serial)
+
+        return self.call(context, msg)
 
     def count_recordsets(self, context, criterion=None):
-        LOG.info(_LI("count_recordsets: Calling central's count_recordsets."))
-        return self.client.call(context, 'count_recordsets',
-                                criterion=criterion)
+        LOG.info("count_recordsets: Calling central's count_recordsets.")
+        msg = self.make_msg('count_recordsets', criterion=criterion)
+
+        return self.call(context, msg)
 
     # Record Methods
-    def create_record(self, context, domain_id, recordset_id, record,
+    def create_record(self, context, domain_id, recordset_id, values,
                       increment_serial=True):
-        LOG.info(_LI("create_record: Calling central's create_record."))
-        return self.client.call(context, 'create_record',
-                                domain_id=domain_id,
-                                recordset_id=recordset_id,
-                                record=record,
-                                increment_serial=increment_serial)
+        LOG.info("create_record: Calling central's create_record.")
+        msg = self.make_msg('create_record',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id,
+                            values=values,
+                            increment_serial=increment_serial)
+
+        return self.call(context, msg)
+
+    # Record Methods
+    def create_record_ptr(self, context, domain_id, recordset_id, values,
+                      increment_serial=True):
+        LOG.info("create_record_ptr: Calling central's create_record.")
+        msg = self.make_msg('create_record_ptr',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id,
+                            values=values,
+                            increment_serial=increment_serial)
+
+        return self.call(context, msg)
+
 
     def get_record(self, context, domain_id, recordset_id, record_id):
-        LOG.info(_LI("get_record: Calling central's get_record."))
-        return self.client.call(context, 'get_record',
-                                domain_id=domain_id,
-                                recordset_id=recordset_id,
-                                record_id=record_id)
+        LOG.info("get_record: Calling central's get_record.")
+        msg = self.make_msg('get_record',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id,
+                            record_id=record_id)
+
+        return self.call(context, msg)
 
     def find_records(self, context, criterion=None, marker=None, limit=None,
                      sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_records: Calling central's find_records."))
-        return self.client.call(context, 'find_records', criterion=criterion,
-                                marker=marker, limit=limit, sort_key=sort_key,
-                                sort_dir=sort_dir)
+        LOG.info("find_records: Calling central's find_records.")
+        msg = self.make_msg('find_records', criterion=criterion, marker=marker,
+                            limit=limit, sort_key=sort_key, sort_dir=sort_dir)
+
+        return self.call(context, msg)
 
     def find_record(self, context, criterion=None):
-        LOG.info(_LI("find_record: Calling central's find_record."))
-        return self.client.call(context, 'find_record', criterion=criterion)
+        LOG.info("find_record: Calling central's find_record.")
+        msg = self.make_msg('find_record', criterion=criterion)
 
-    def update_record(self, context, record, increment_serial=True):
-        LOG.info(_LI("update_record: Calling central's update_record."))
-        return self.client.call(context, 'update_record',
-                                record=record,
-                                increment_serial=increment_serial)
+        return self.call(context, msg)
+
+    def update_record(self, context, domain_id, recordset_id, record_id,
+                      values, increment_serial=True):
+        LOG.info("update_record: Calling central's update_record.")
+        msg = self.make_msg('update_record',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id,
+                            record_id=record_id,
+                            values=values,
+                            increment_serial=increment_serial)
+
+        return self.call(context, msg)
 
     def delete_record(self, context, domain_id, recordset_id, record_id,
                       increment_serial=True):
-        LOG.info(_LI("delete_record: Calling central's delete_record."))
-        return self.client.call(context, 'delete_record',
-                                domain_id=domain_id,
-                                recordset_id=recordset_id,
-                                record_id=record_id,
-                                increment_serial=increment_serial)
+        LOG.info("delete_record: Calling central's delete_record.")
+        msg = self.make_msg('delete_record',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id,
+                            record_id=record_id,
+                            increment_serial=increment_serial)
+
+        return self.call(context, msg)
 
     def count_records(self, context, criterion=None):
-        LOG.info(_LI("count_records: Calling central's count_records."))
-        return self.client.call(context, 'count_records', criterion=criterion)
+        LOG.info("count_records: Calling central's count_records.")
+        msg = self.make_msg('count_records', criterion=criterion)
 
-    # Misc. Report combining counts for tenants, domains and records
-    def count_report(self, context, criterion=None):
-        LOG.info(_LI("count_report: Calling central's count_report."))
-        return self.client.call(context, 'count_report', criterion=criterion)
+        return self.call(context, msg)
 
     # Sync Methods
     def sync_domains(self, context):
-        LOG.info(_LI("sync_domains: Calling central's sync_domains."))
-        return self.client.call(context, 'sync_domains')
+        LOG.info("sync_domains: Calling central's sync_domains.")
+        msg = self.make_msg('sync_domains')
+
+        return self.call(context, msg)
 
     def sync_domain(self, context, domain_id):
-        LOG.info(_LI("sync_domain: Calling central's sync_domains."))
-        return self.client.call(context, 'sync_domain', domain_id=domain_id)
+        LOG.info("sync_domain: Calling central's sync_domains.")
+        msg = self.make_msg('sync_domain', domain_id=domain_id)
+
+        return self.call(context, msg)
 
     def sync_record(self, context, domain_id, recordset_id, record_id):
-        LOG.info(_LI("sync_record: Calling central's sync_record."))
-        return self.client.call(context, 'sync_record',
-                                domain_id=domain_id,
-                                recordset_id=recordset_id,
-                                record_id=record_id)
+        LOG.info("sync_record: Calling central's sync_record.")
+        msg = self.make_msg('sync_record',
+                            domain_id=domain_id,
+                            recordset_id=recordset_id,
+                            record_id=record_id)
+
+        return self.call(context, msg)
 
     def list_floatingips(self, context):
-        LOG.info(_LI("list_floatingips: Calling central's list_floatingips."))
-        return self.client.call(context, 'list_floatingips')
+        msg = self.make_msg('list_floatingips')
+        return self.call(context, msg, version="3.1")
 
     def get_floatingip(self, context, region, floatingip_id):
-        LOG.info(_LI("get_floatingip: Calling central's get_floatingip."))
-        return self.client.call(context, 'get_floatingip', region=region,
-                                floatingip_id=floatingip_id)
+        msg = self.make_msg('get_floatingip', region=region,
+                            floatingip_id=floatingip_id)
+        return self.call(context, msg, version="3.1")
 
     def update_floatingip(self, context, region, floatingip_id, values):
-        LOG.info(_LI("update_floatingip: "
-                     "Calling central's update_floatingip."))
-        return self.client.call(context, 'update_floatingip', region=region,
-                                floatingip_id=floatingip_id, values=values)
+        msg = self.make_msg('update_floatingip', region=region,
+                            floatingip_id=floatingip_id, values=values)
+        return self.call(context, msg)
 
     # Blacklisted Domain Methods
-    def create_blacklist(self, context, blacklist):
-        LOG.info(_LI("create_blacklist: Calling central's create_blacklist"))
-        return self.client.call(context, 'create_blacklist',
-                                blacklist=blacklist)
+    def create_blacklist(self, context, values):
+        LOG.info("create_blacklist: Calling central's create_blacklist")
+        msg = self.make_msg('create_blacklist', values=values)
+
+        return self.call(context, msg, version='3.3')
 
     def get_blacklist(self, context, blacklist_id):
-        LOG.info(_LI("get_blacklist: Calling central's get_blacklist."))
-        return self.client.call(context, 'get_blacklist',
-                                blacklist_id=blacklist_id)
+        LOG.info("get_blacklist: Calling central's get_blacklist.")
+        msg = self.make_msg('get_blacklist', blacklist_id=blacklist_id)
+
+        return self.call(context, msg, version='3.3')
 
     def find_blacklists(self, context, criterion=None, marker=None, limit=None,
                         sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_blacklists: Calling central's find_blacklists."))
-        return self.client.call(
-            context, 'find_blacklists', criterion=criterion, marker=marker,
-            limit=limit, sort_key=sort_key, sort_dir=sort_dir)
+        LOG.info("find_blacklists: Calling central's find_blacklists.")
+        msg = self.make_msg('find_blacklists', criterion=criterion,
+                            marker=marker, limit=limit, sort_key=sort_key,
+                            sort_dir=sort_dir)
+
+        return self.call(context, msg, version='3.3')
 
     def find_blacklist(self, context, criterion):
-        LOG.info(_LI("find_blacklist: Calling central's find_blacklist."))
-        return self.client.call(context, 'find_blacklist', criterion=criterion)
+        LOG.info("find_blacklist: Calling central's find_blacklist.")
+        msg = self.make_msg('find_blacklist', criterion=criterion)
 
-    def update_blacklist(self, context, blacklist):
-        LOG.info(_LI("update_blacklist: Calling central's update_blacklist."))
-        return self.client.call(context, 'update_blacklist',
-                                blacklist=blacklist)
+        return self.call(context, msg, version='3.3')
+
+    def update_blacklist(self, context, blacklist_id, values):
+        LOG.info("update_blacklist: Calling central's update_blacklist.")
+        msg = self.make_msg('update_blacklist', blacklist_id=blacklist_id,
+                            values=values)
+
+        return self.call(context, msg, version='3.3')
 
     def delete_blacklist(self, context, blacklist_id):
-        LOG.info(_LI("delete_blacklist: Calling central's delete blacklist."))
-        return self.client.call(context, 'delete_blacklist',
-                                blacklist_id=blacklist_id)
+        LOG.info("delete_blacklist: Calling central's delete blacklist.")
+        msg = self.make_msg('delete_blacklist', blacklist_id=blacklist_id)
 
-    # Pool Server Methods
-    def create_pool(self, context, pool):
-        LOG.info(_LI("create_pool: Calling central's create_pool."))
-        return self.client.call(context, 'create_pool', pool=pool)
-
-    def find_pools(self, context, criterion=None, marker=None, limit=None,
-                   sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_pools: Calling central's find_pools."))
-        return self.client.call(context, 'find_pools', criterion=criterion,
-                                marker=marker, limit=limit, sort_key=sort_key,
-                                sort_dir=sort_dir)
-
-    def find_pool(self, context, criterion=None):
-        LOG.info(_LI("find_pool: Calling central's find_pool."))
-        return self.client.call(context, 'find_pool', criterion=criterion)
-
-    def get_pool(self, context, pool_id):
-        LOG.info(_LI("get_pool: Calling central's get_pool."))
-        return self.client.call(context, 'get_pool', pool_id=pool_id)
-
-    def update_pool(self, context, pool):
-        LOG.info(_LI("update_pool: Calling central's update_pool."))
-        return self.client.call(context, 'update_pool', pool=pool)
-
-    def delete_pool(self, context, pool_id):
-        LOG.info(_LI("delete_pool: Calling central's delete_pool."))
-        return self.client.call(context, 'delete_pool', pool_id=pool_id)
-
-    # Pool Manager Integration Methods
-    def update_status(self, context, domain_id, status, serial):
-        LOG.info(_LI("update_status: Calling central's update_status "
-                     "for %(domain_id)s : %(status)s : %(serial)s") %
-                 {'domain_id': domain_id, 'status': status, 'serial': serial})
-        self.client.cast(context, 'update_status', domain_id=domain_id,
-                         status=status, serial=serial)
-
-    # Zone Ownership Transfers
-    def create_zone_transfer_request(self, context, zone_transfer_request):
-        LOG.info(_LI("create_zone_transfer_request: \
-                     Calling central's create_zone_transfer_request."))
-
-        return self.client.call(
-            context, 'create_zone_transfer_request',
-            zone_transfer_request=zone_transfer_request)
-
-    def get_zone_transfer_request(self, context, zone_transfer_request_id):
-        LOG.info(_LI("get_zone_transfer_request: \
-                     Calling central's get_zone_transfer_request."))
-        return self.client.call(
-            context,
-            'get_zone_transfer_request',
-            zone_transfer_request_id=zone_transfer_request_id)
-
-    def find_zone_transfer_requests(self, context, criterion=None, marker=None,
-                                    limit=None, sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_zone_transfer_requests: \
-                     Calling central's find_zone_transfer_requests."))
-
-        return self.client.call(
-            context, 'find_zone_transfer_requests', criterion=criterion,
-            marker=marker, limit=limit, sort_key=sort_key, sort_dir=sort_dir)
-
-    def find_zone_transfer_request(self, context, zone_transfer_request):
-        LOG.info(_LI("find_zone_transfer_request: \
-                     Calling central's find_zone_transfer_request."))
-        return self.client.call(
-            context, 'find_zone_transfer_request',
-            zone_transfer_request=zone_transfer_request)
-
-    def update_zone_transfer_request(self, context, zone_transfer_request):
-        LOG.info(_LI("update_zone_transfer_request: \
-                     Calling central's update_zone_transfer_request."))
-        return self.client.call(
-            context, 'update_zone_transfer_request',
-            zone_transfer_request=zone_transfer_request)
-
-    def delete_zone_transfer_request(self, context, zone_transfer_request_id):
-        LOG.info(_LI("delete_zone_transfer_request: \
-                     Calling central's delete_zone_transfer_request."))
-        return self.client.call(
-            context,
-            'delete_zone_transfer_request',
-            zone_transfer_request_id=zone_transfer_request_id)
-
-    def create_zone_transfer_accept(self, context, zone_transfer_accept):
-        LOG.info(_LI("create_zone_transfer_accept: \
-                     Calling central's create_zone_transfer_accept."))
-        return self.client.call(
-            context, 'create_zone_transfer_accept',
-            zone_transfer_accept=zone_transfer_accept)
-
-    def get_zone_transfer_accept(self, context, zone_transfer_accept_id):
-        LOG.info(_LI("get_zone_transfer_accept: \
-                     Calling central's get_zone_transfer_accept."))
-        return self.client.call(
-            context,
-            'get_zone_transfer_accept',
-            zone_transfer_accept_id=zone_transfer_accept_id)
-
-    def find_zone_transfer_accepts(self, context, criterion=None, marker=None,
-                                   limit=None, sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_zone_transfer_accepts: \
-                     Calling central's find_zone_transfer_accepts."))
-        return self.client.call(
-            context, 'find_zone_transfer_accepts', criterion=criterion,
-            marker=marker, limit=limit, sort_key=sort_key, sort_dir=sort_dir)
-
-    def find_zone_transfer_accept(self, context, zone_transfer_accept):
-        LOG.info(_LI("find_zone_transfer_accept: \
-                     Calling central's find_zone_transfer_accept."))
-        return self.client.call(
-            context, 'find_zone_transfer_accept',
-            zone_transfer_accept=zone_transfer_accept)
-
-    def update_zone_transfer_accept(self, context, zone_transfer_accept):
-        LOG.info(_LI("update_zone_transfer_accept: \
-                     Calling central's update_zone_transfer_accept."))
-        return self.client.call(
-            context, 'update_zone_transfer_accept',
-            zone_transfer_accept=zone_transfer_accept)
-
-    def delete_zone_transfer_accept(self, context, zone_transfer_accept_id):
-        LOG.info(_LI("delete_zone_transfer_accept: \
-                     Calling central's delete_zone_transfer_accept."))
-        return self.client.call(
-            context,
-            'delete_zone_transfer_accept',
-            zone_transfer_accept_id=zone_transfer_accept_id)
-
-    def xfr_domain(self, context, domain_id):
-        LOG.info(_LI("xfr_domain: Calling central's xfr_domain"))
-        cctxt = self.client.prepare(version='5.3')
-        return cctxt.call(context, 'xfr_domain', domain_id=domain_id)
-
-    # Zone Import Methods
-    def create_zone_import(self, context, request_body):
-        LOG.info(_LI("create_zone_import: Calling central's "
-                     "create_zone_import."))
-        return self.client.call(context, 'create_zone_import',
-                                request_body=request_body)
-
-    def find_zone_imports(self, context, criterion=None, marker=None,
-                          limit=None, sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_zone_imports: Calling central's "
-                     "find_zone_imports."))
-        return self.client.call(context, 'find_zone_imports',
-                                criterion=criterion, marker=marker,
-                                limit=limit, sort_key=sort_key,
-                                sort_dir=sort_dir)
-
-    def get_zone_import(self, context, zone_import_id):
-        LOG.info(_LI("get_zone_import: Calling central's get_zone_import."))
-        return self.client.call(context, 'get_zone_import',
-                                zone_import_id=zone_import_id)
-
-    def update_zone_import(self, context, zone_import):
-        LOG.info(_LI("update_zone_import: Calling central's "
-                     "update_zone_import."))
-        return self.client.call(context, 'update_zone_import',
-                                zone_import=zone_import)
-
-    def delete_zone_import(self, context, zone_import_id):
-        LOG.info(_LI("delete_zone_import: Calling central's "
-                     "delete_zone_import."))
-        return self.client.call(context, 'delete_zone_import',
-                                zone_import_id=zone_import_id)
-
-    # Zone Export Methods
-    def create_zone_export(self, context, zone_id):
-        LOG.info(_LI("create_zone_export: Calling central's "
-                     "create_zone_export."))
-        return self.client.call(context, 'create_zone_export',
-                                zone_id=zone_id)
-
-    def find_zone_exports(self, context, criterion=None, marker=None,
-                  limit=None, sort_key=None, sort_dir=None):
-        LOG.info(_LI("find_zone_exports: Calling central's "
-                     "find_zone_exports."))
-        return self.client.call(context, 'find_zone_exports',
-                                criterion=criterion, marker=marker,
-                                limit=limit, sort_key=sort_key,
-                                sort_dir=sort_dir)
-
-    def get_zone_export(self, context, zone_export_id):
-        LOG.info(_LI("get_zone_export: Calling central's get_zone_export."))
-        return self.client.call(context, 'get_zone_export',
-                                zone_export_id=zone_export_id)
-
-    def update_zone_export(self, context, zone_export):
-        LOG.info(_LI("update_zone_export: Calling central's "
-                     "update_zone_export."))
-        return self.client.call(context, 'update_zone_export',
-                                zone_export=zone_export)
-
-    def delete_zone_export(self, context, zone_export_id):
-        LOG.info(_LI("delete_zone_export: Calling central's "
-                     "delete_zone_export."))
-        return self.client.call(context, 'delete_zone_export',
-                                zone_export_id=zone_export_id)
+        return self.call(context, msg, version='3.3')
