@@ -247,6 +247,19 @@ class Service(rpc_service.Service):
 
         return domain
 
+    def _increment_domain_serial_ptr(self, context, domain_id):
+        domain = self.storage_api.get_domain_ptr(context, domain_id)
+
+        # Increment the serial number
+        values = {'serial': utils.increment_serial(domain['serial'])}
+
+        with self.storage_api.update_domain_ptr(
+                context, domain_id, values) as domain:
+            with wrap_backend_call():
+                self.backend.update_domain_ptr(context, domain)
+
+        return domain
+
     # Quota Enforcement Methods
     def _enforce_domain_quota(self, context, tenant_id):
         criterion = {'tenant_id': tenant_id}
@@ -525,7 +538,7 @@ class Service(rpc_service.Service):
 
     # modified or added by M
     def get_domain(self, context, domain_id):
-        domain = self.storage_api.get_domain_custom(context, domain_id)
+        domain = self.storage_api.get_domain(context, domain_id)
 
         target = {
             'domain_id': domain_id,
@@ -704,7 +717,8 @@ class Service(rpc_service.Service):
     # RecordSet Methods in-addr.arpa PTR
     # modified or added by M
     def create_recordset_ptr(self, context, domain_id, values):
-        domain = self.storage_api.get_domain(context, domain_id)
+	LOG.info("I am in central service.py file")
+        domain = self.storage_api.get_domain_ptr(context, domain_id)
 
         target = {
             'domain_id': domain_id,
@@ -725,10 +739,10 @@ class Service(rpc_service.Service):
         self._is_valid_recordset_placement_subdomain(
             context, domain, values['name'])
 
-        with self.storage_api.create_recordset(
+        with self.storage_api.create_recordset_ptr(
                 context, domain_id, values) as recordset:
             with wrap_backend_call():
-                self.backend.create_recordset(context, domain, recordset)
+                self.backend.create_recordset_ptr(context, domain, recordset)
 
         # Send RecordSet creation notification
         self.notifier.info(context, 'dns.recordset.create', recordset)
@@ -895,6 +909,35 @@ class Service(rpc_service.Service):
         self.notifier.info(context, 'dns.record.create', record)
 
         return record
+
+    def create_record_ptr(self, context, domain_id, recordset_id, values,
+                      increment_serial=True):
+        domain = self.storage_api.get_domain_ptr(context, domain_id)
+        recordset = self.storage_api.get_recordset_custom(context, recordset_id)
+
+        target = {
+            'domain_id': domain_id,
+            'domain_name': domain['name'],
+            'recordset_id': recordset_id,
+            'recordset_name': recordset['name'],
+            'tenant_id': domain['tenant_id']
+        }
+
+        #policy.check('create_record', context, target)
+
+        # Ensure the tenant has enough quota to continue
+        self._enforce_record_quota(context, domain, recordset)
+
+        with self.storage_api.create_record_ptr(
+                context, domain_id, recordset_id, values) as record:
+            with wrap_backend_call():
+                self.backend.create_record_ptr(context, domain, recordset, record)
+
+        # Send Record creation notification
+        self.notifier.info(context, 'dns.record.create', record)
+
+        return record
+
 
     def get_record(self, context, domain_id, recordset_id, record_id):
         domain = self.storage_api.get_domain(context, domain_id)
