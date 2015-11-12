@@ -63,12 +63,20 @@ class Backend(DriverPlugin):
     def update_domain(self, context, domain):
         """ Update a DNS domain """
 
+    def update_domain_ptr(self, context, domain):
+        """ Update a DNS domain PTR """
+
+
     @abc.abstractmethod
     def delete_domain(self, context, domain):
         """ Delete a DNS domain """
 
     def create_recordset(self, context, domain, recordset):
         """ Create a DNS recordset """
+
+    def create_recordset_ptr(self, context, domain, recordset):
+        """ Create a DNS recordset """
+
 
     @abc.abstractmethod
     def update_recordset(self, context, domain, recordset):
@@ -81,6 +89,9 @@ class Backend(DriverPlugin):
     @abc.abstractmethod
     def create_record(self, context, domain, recordset, record):
         """ Create a DNS record """
+
+    def create_record_ptr(self, context, domain, recordset, record):
+        """ Create a DNS record ptr"""
 
     @abc.abstractmethod
     def update_record(self, context, domain, recordset, record):
