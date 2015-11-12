@@ -429,14 +429,14 @@ class StorageAPI(object):
 
     # custom get domain
     # modified or added by M
-    def get_domain_custom(self, context, domain_id):
+    def get_domain_ptr(self, context, domain_id):
         """
         Get a Domain via its ID.
 
         :param context: RPC Context.
         :param domain_id: ID of the Domain.
         """
-        return self.storage.get_domain_custom(context, domain_id)
+        return self.storage.get_domain_ptr(context, domain_id)
 
 
     def find_domains(self, context, criterion=None, marker=None, limit=None,
@@ -491,6 +491,27 @@ class StorageAPI(object):
         else:
             self.storage.commit()
 
+
+    def update_domain_ptr(self, context, domain_id, values):
+        """
+        Update a Domain via ID.
+
+        :param context: RPC Context.
+        :param domain_id: Values to update the Domain with
+        :param values: Values to update the Domain from.
+        """
+        self.storage.begin()
+
+        try:
+            domain = self.storage.update_domain_ptr(context, domain_id, values)
+            yield domain
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self.storage.rollback()
+        else:
+            self.storage.commit()
+
+
     @contextlib.contextmanager
     def delete_domain(self, context, domain_id):
         """
@@ -540,6 +561,28 @@ class StorageAPI(object):
         else:
             self.storage.commit()
 
+    @contextlib.contextmanager
+    def create_recordset_ptr(self, context, domain_id, values):
+        """
+        Create a recordset on a given Domain ID
+
+        :param context: RPC Context.
+        :param domain_id: Domain ID to create the recordset in.
+        :param values: Values to create the new RecordSet from.
+        """
+        self.storage.begin()
+
+        try:
+            recordset = self.storage.create_recordset_ptr(
+                context, domain_id, values)
+            yield recordset
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self.storage.rollback()
+        else:
+            self.storage.commit()
+
+
     def get_recordset(self, context, recordset_id):
         """
         Get a recordset via ID
@@ -548,6 +591,16 @@ class StorageAPI(object):
         :param recordset_id: RecordSet ID to get
         """
         return self.storage.get_recordset(context, recordset_id)
+
+    def get_recordset_custom(self, context, recordset_id):
+        """
+        Get a recordset via ID
+
+        :param context: RPC Context.
+        :param recordset_id: RecordSet ID to get
+        """
+        return self.storage.get_recordset_custom(context, recordset_id)
+
 
     def find_recordsets(self, context, criterion=None, marker=None, limit=None,
                         sort_key=None, sort_dir=None):
@@ -638,6 +691,29 @@ class StorageAPI(object):
                 self.storage.rollback()
         else:
             self.storage.commit()
+
+    @contextlib.contextmanager
+    def create_record_ptr(self, context, domain_id, recordset_id, values):
+        """
+        Create a record ptr on a given Domain ID
+
+        :param context: RPC Context.
+        :param domain_id: Domain ID to create the record in.
+        :param recordset_id: RecordSet ID to create the record in.
+        :param values: Values to create the new Record from.
+        """
+        self.storage.begin()
+
+        try:
+            record = self.storage.create_record_ptr(
+                context, domain_id, recordset_id, values)
+            yield record
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self.storage.rollback()
+        else:
+            self.storage.commit()
+
 
     def get_record(self, context, record_id):
         """
