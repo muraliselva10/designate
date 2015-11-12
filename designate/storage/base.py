@@ -1,39 +1,36 @@
 # Copyright 2012 Managed I.T.
 #
-# Author: Kiall Mac Innes <kiall@managedit.ie>
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
-import abc
+# Author: Kiall Mac Innes <kiall@managedit.ie>                                                                                                                                                             
+#                                                                                                                                                                                                          
+# Licensed under the Apache License, Version 2.0 (the "License"); you may                                                                                                                                  
+# not use this file except in compliance with the License. You may obtain                                                                                                                                  
+# a copy of the License at                                                                                                                                                                                 
+#                                                                                                                                                                                                          
+#      http://www.apache.org/licenses/LICENSE-2.0                                                                                                                                                          
+#                                                                                                                                                                                                          
+# Unless required by applicable law or agreed to in writing, software                                                                                                                                      
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT                                                                                                                                
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the                                                                                                                                 
+# License for the specific language governing permissions and limitations                                                                                                                                  
+# under the License.                                                                                                                                                                                       
+import abc                                                                                                                                                                                                 
+from designate.plugin import DriverPlugin                                                                                                                                                                  
+                                                                                                                                                                                                           
 
-import six
-
-from designate.plugin import DriverPlugin
-
-
-@six.add_metaclass(abc.ABCMeta)
 class Storage(DriverPlugin):
 
-    """Base class for storage plugins"""
+    """ Base class for storage plugins """
+    __metaclass__ = abc.ABCMeta
     __plugin_ns__ = 'designate.storage'
     __plugin_type__ = 'storage'
 
     @abc.abstractmethod
-    def create_quota(self, context, quota):
+    def create_quota(self, context, values):
         """
         Create a Quota.
 
         :param context: RPC Context.
-        :param quota: Quota object with the values to be created.
+        :param values: Values to create the new Quota from.
         """
 
     @abc.abstractmethod
@@ -71,12 +68,13 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def update_quota(self, context, quota):
+    def update_quota(self, context, quota_id, values):
         """
-        Update a Quota
+        Update a Quota via ID
 
         :param context: RPC Context.
-        :param quota: Quota to update.
+        :param quota_id: Quota ID to update.
+        :param values: Values to update the Quota from
         """
 
     @abc.abstractmethod
@@ -89,12 +87,65 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def create_tld(self, context, tld):
+    def create_server(self, context, values):
+        """
+        Create a Server.
+
+        :param context: RPC Context.
+        :param values: Values to create the new Domain from.
+        """
+
+    @abc.abstractmethod
+    def find_servers(self, context, criterion=None, marker=None,
+                     limit=None, sort_key=None, sort_dir=None):
+        """
+        Find Servers.
+
+        :param context: RPC Context.
+        :param criterion: Criteria to filter by.
+        :param marker: Resource ID from which after the requested page will
+                       start after
+        :param limit: Integer limit of objects of the page size after the
+                      marker
+        :param sort_key: Key from which to sort after.
+        :param sort_dir: Direction to sort after using sort_key.
+        """
+
+    @abc.abstractmethod
+    def get_server(self, context, server_id):
+        """
+        Get a Server via ID.
+
+        :param context: RPC Context.
+        :param server_id: Server ID to get.
+        """
+
+    @abc.abstractmethod
+    def update_server(self, context, server_id, values):
+        """
+        Update a Server via ID
+
+        :param context: RPC Context.
+        :param server_id: Server ID to update.
+        :param values: Values to update the Server from
+        """
+
+    @abc.abstractmethod
+    def delete_server(self, context, server_id):
+        """
+        Delete a Server via ID.
+
+        :param context: RPC Context.
+        :param server_id: Delete a Server via ID
+        """
+
+    @abc.abstractmethod
+    def create_tld(self, context, values):
         """
         Create a TLD.
 
         :param context: RPC Context.
-        :param tld: Tld object with the values to be created.
+        :param values: Values to create the new TLD from.
         """
 
     @abc.abstractmethod
@@ -129,15 +180,22 @@ class Storage(DriverPlugin):
 
         :param context: RPC Context.
         :param criterion: Criteria to filter by.
+        :param marker: Resource ID from which after the requested page will
+                       start after
+        :param limit: Integer limit of objects of the page size after the
+                      marker
+        :param sort_key: Key from which to sort after.
+        :param sort_dir: Direction to sort after using sort_key.
         """
 
     @abc.abstractmethod
-    def update_tld(self, context, tld):
+    def update_tld(self, context, tld_id, values):
         """
-        Update a TLD
+        Update a TLD via ID
 
         :param context: RPC Context.
-        :param tld: TLD to update.
+        :param tld_id: TLD ID to update.
+        :param values: Values to update the TLD from
         """
 
     @abc.abstractmethod
@@ -150,12 +208,11 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def create_tsigkey(self, context, tsigkey):
+    def create_tsigkey(self, context, values):
         """
         Create a TSIG Key.
 
         :param context: RPC Context.
-        :param tsigkey: TsigKey object with the values to be created.
         """
 
     @abc.abstractmethod
@@ -184,12 +241,13 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def update_tsigkey(self, context, tsigkey):
+    def update_tsigkey(self, context, tsigkey_id, values):
         """
-        Update a TSIG Key
+        Update a TSIG Key via ID
 
         :param context: RPC Context.
-        :param tsigkey: TSIG Keyto update.
+        :param tsigkey_id: TSIG Key ID to update.
+        :param values: Values to update the TSIG Key from
         """
 
     @abc.abstractmethod
@@ -227,12 +285,12 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def create_domain(self, context, domain):
+    def create_domain(self, context, values):
         """
         Create a new Domain.
 
         :param context: RPC Context.
-        :param domain: Domain object with the values to be created.
+        :param values: Values to create the new Domain from.
         """
 
     @abc.abstractmethod
@@ -270,12 +328,13 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def update_domain(self, context, domain):
+    def update_domain(self, context, domain_id, values):
         """
-        Update a Domain
+        Update a Domain via ID.
 
         :param context: RPC Context.
-        :param domain: Domain object.
+        :param domain_id: Values to update the Domain with
+        :param values: Values to update the Domain from.
         """
 
     @abc.abstractmethod
@@ -288,15 +347,6 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def purge_domain(self, context, zone):
-        """
-        Purge a Domain
-
-        :param context: RPC Context.
-        :param domain: Zone to delete.
-        """
-
-    @abc.abstractmethod
     def count_domains(self, context, criterion=None):
         """
         Count domains
@@ -306,13 +356,13 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def create_recordset(self, context, domain_id, recordset):
+    def create_recordset(self, context, domain_id, values):
         """
         Create a recordset on a given Domain ID
 
         :param context: RPC Context.
         :param domain_id: Domain ID to create the recordset in.
-        :param recordset: RecordSet object with the values to be created.
+        :param values: Values to create the new RecordSet from.
         """
 
     @abc.abstractmethod
@@ -331,6 +381,7 @@ class Storage(DriverPlugin):
         Find RecordSets.
 
         :param context: RPC Context.
+        :param domain_id: Domain ID where the recordsets reside.
         :param criterion: Criteria to filter by.
         :param marker: Resource ID from which after the requested page will
                        start after
@@ -338,15 +389,6 @@ class Storage(DriverPlugin):
                       marker
         :param sort_key: Key from which to sort after.
         :param sort_dir: Direction to sort after using sort_key.
-        """
-
-    @abc.abstractmethod
-    def find_recordsets_axfr(self, context, criterion=None):
-        """
-        Find RecordSets.
-
-        :param context: RPC Context.
-        :param criterion: Criteria to filter by.
         """
 
     @abc.abstractmethod
@@ -359,12 +401,12 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def update_recordset(self, context, recordset):
+    def update_recordset(self, context, recordset_id, values):
         """
-        Update a recordset
+        Update a recordset via ID
 
-        :param context: RPC Context.
-        :param recordset: RecordSet to update
+        :param context: RPC Context
+        :param recordset_id: RecordSet ID to update
         """
 
     @abc.abstractmethod
@@ -372,7 +414,7 @@ class Storage(DriverPlugin):
         """
         Delete a recordset
 
-        :param context: RPC Context.
+        :param context: RPC Context
         :param recordset_id: RecordSet ID to delete
         """
 
@@ -386,14 +428,14 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def create_record(self, context, domain_id, recordset_id, record):
+    def create_record(self, context, domain_id, recordset_id, values):
         """
         Create a record on a given Domain ID
 
         :param context: RPC Context.
         :param domain_id: Domain ID to create the record in.
         :param recordset_id: RecordSet ID to create the record in.
-        :param record: Record object with the values to be created.
+        :param values: Values to create the new Record from.
         """
 
     @abc.abstractmethod
@@ -431,12 +473,12 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def update_record(self, context, record):
+    def update_record(self, context, record_id, values):
         """
-        Update a record
+        Update a record via ID
 
-        :param context: RPC Context.
-        :param record: Record to update
+        :param context: RPC Context
+        :param record_id: Record ID to update
         """
 
     @abc.abstractmethod
@@ -444,7 +486,7 @@ class Storage(DriverPlugin):
         """
         Delete a record
 
-        :param context: RPC Context.
+        :param context: RPC Context
         :param record_id: Record ID to delete
         """
 
@@ -458,12 +500,12 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def create_blacklist(self, context, blacklist):
+    def create_blacklist(self, context, values):
         """
         Create a Blacklist.
 
         :param context: RPC Context.
-        :param blacklist: Blacklist object with the values to be created.
+        :param values: Values to create the new Blacklist from.
         """
 
     @abc.abstractmethod
@@ -501,12 +543,13 @@ class Storage(DriverPlugin):
         """
 
     @abc.abstractmethod
-    def update_blacklist(self, context, blacklist):
+    def update_blacklist(self, context, blacklist_id, values):
         """
-        Update a Blacklist
+        Update a Blacklist via ID
 
         :param context: RPC Context.
-        :param blacklist: Blacklist to update.
+        :param blacklist_id: Blacklist ID to update.
+        :param values: Values to update the Blacklist from
         """
 
     @abc.abstractmethod
@@ -518,251 +561,8 @@ class Storage(DriverPlugin):
         :param blacklist_id: Delete a Blacklist via ID
         """
 
-    @abc.abstractmethod
-    def create_pool(self, context, pool):
-        """
-        Create a Pool.
-
-        :param context: RPC Context.
-        :param pool: Pool object with the values to be created.
-        """
-
-    @abc.abstractmethod
-    def find_pools(self, context, criterion=None, marker=None,
-                   limit=None, sort_key=None, sort_dir=None):
-        """
-        Find all Pools
-
-        :param context: RPC Context.
-        :param criterion: Criteria by which to filter
-        :param marker: Resource ID used by paging. The next page will start
-                       at the next resource after the marker
-        :param limit: Integer limit of objects on the page
-        :param sort_key: Key used to sort the returned list
-        :param sort_dir: Directions to sort after using sort_key
-        """
-
-    @abc.abstractmethod
-    def find_pool(self, context, criterion):
-        """
-        Find a single Pool.
-
-        :param context: RPC Context.
-        :param criterion: Criteria to filter by.
-        """
-
-    @abc.abstractmethod
-    def get_pool(self, context, pool_id):
-        """
-        Get a Pool via the id
-
-        :param context: RPC Context.
-        :param pool_id: The ID of the pool to get
-        """
-
-    @abc.abstractmethod
-    def update_pool(self, context, pool):
-        """
-        Update the specified pool
-
-        :param context: RPC Context.
-        :param pool: Pool to update.
-        """
-
-    @abc.abstractmethod
-    def delete_pool(self, context, pool_id):
-        """
-        Delete the pool with the matching id
-
-        :param context: RPC Context.
-        :param pool_id: The ID of the pool to be deleted
-        """
-
-    @abc.abstractmethod
-    def create_pool_attribute(self, context, pool_id, pool_attribute):
-        """
-        Create a PoolAttribute.
-
-        :param context: RPC Context.
-        :param pool_id: The ID of the pool to which the attribute belongs.
-        :param pool_attribute: PoolAttribute object with the values created.
-        """
-
-    @abc.abstractmethod
-    def find_pool_attributes(self, context, criterion=None, marker=None,
-                             limit=None, sort_key=None, sort_dir=None):
-        """
-        Find all PoolAttributes
-
-        :param context: RPC Context
-        :param criterion: Criteria by which to filer
-        :param marker: Resource ID used by paging. The next page will start
-                       at the next resource after the marker
-        :param limit: Integer limit of objects on the page
-        :param sort_key: Key used to sort the returned list
-        :param sort_dir: Directions to sort after using sort_key
-        """
-
-    @abc.abstractmethod
-    def find_pool_attribute(self, context, criterion):
-        """
-        Find a single PoolAttribute
-
-        :param context: RPC Context.
-        :param criterion: Criteria to filter by.
-        """
-
-    @abc.abstractmethod
-    def get_pool_attribute(self, context, pool_attribute_id):
-        """
-        Get a PoolAttribute via the ID
-
-        :param context: RPC Context.
-        :param pool_attribute_id: The ID of the PoolAttribute to get
-        """
-
-    @abc.abstractmethod
-    def update_pool_attribute(self, context, pool_attribute):
-        """
-        Update the specified pool
-
-        :param context: RPC Context.
-        :param pool_attribute: PoolAttribute to update
-        """
-
-    @abc.abstractmethod
-    def delete_pool_attribute(self, context, pool_attribute_id):
-        """
-        Delete the pool with the matching id
-
-        :param context: RPC Context.
-        :param pool_attribute_id: The ID of the PoolAttribute to be deleted
-        """
-
-    @abc.abstractmethod
-    def create_zone_import(self, context, zone_import):
-        """
-        Create a Zone Import.
-
-        :param context: RPC Context.
-        :param zone_import: Zone Import object with the values to be created.
-        """
-
-    @abc.abstractmethod
-    def get_zone_import(self, context, zone_import_id):
-        """
-        Get a Zone Import via ID.
-
-        :param context: RPC Context.
-        :param zone_import_id: Zone Import ID to get.
-        """
-
-    @abc.abstractmethod
-    def find_zone_imports(self, context, criterion=None, marker=None,
-                          limit=None, sort_key=None, sort_dir=None):
-        """
-        Find Zone Imports
-
-        :param context: RPC Context.
-        :param criterion: Criteria to filter by.
-        :param marker: Resource ID from which after the requested page will
-                       start after
-        :param limit: Integer limit of objects of the page size after the
-                      marker
-        :param sort_key: Key from which to sort after.
-        :param sort_dir: Direction to sort after using sort_key.
-        """
-
-    @abc.abstractmethod
-    def find_zone_import(self, context, criterion):
-        """
-        Find a single Zone Import.
-
-        :param context: RPC Context.
-        :param criterion: Criteria to filter by.
-        """
-
-    @abc.abstractmethod
-    def update_zone_import(self, context, zone_import):
-        """
-        Update a Zone Import
-
-        :param context: RPC Context.
-        :param zone_import: Zone Import to update.
-        """
-
-    @abc.abstractmethod
-    def delete_zone_import(self, context, zone_import_id):
-        """
-        Delete a Zone Import via ID.
-
-        :param context: RPC Context.
-        :param zone_import_id: Delete a Zone Import via ID
-        """
-
-    @abc.abstractmethod
-    def create_zone_export(self, context, zone_export):
-        """
-        Create a Zone Export.
-
-        :param context: RPC Context.
-        :param zone_export: Zone Export object with the values to be created.
-        """
-
-    @abc.abstractmethod
-    def get_zone_export(self, context, zone_export_id):
-        """
-        Get a Zone Export via ID.
-
-        :param context: RPC Context.
-        :param zone_export_id: Zone Export ID to get.
-        """
-
-    @abc.abstractmethod
-    def find_zone_exports(self, context, criterion=None, marker=None,
-                  limit=None, sort_key=None, sort_dir=None):
-        """
-        Find Zone Exports
-
-        :param context: RPC Context.
-        :param criterion: Criteria to filter by.
-        :param marker: Resource ID from which after the requested page will
-                       start after
-        :param limit: Integer limit of objects of the page size after the
-                      marker
-        :param sort_key: Key from which to sort after.
-        :param sort_dir: Direction to sort after using sort_key.
-        """
-
-    @abc.abstractmethod
-    def find_zone_export(self, context, criterion):
-        """
-        Find a single Zone Export.
-
-        :param context: RPC Context.
-        :param criterion: Criteria to filter by.
-        """
-
-    @abc.abstractmethod
-    def update_zone_export(self, context, zone_export):
-        """
-        Update a Zone Export
-
-        :param context: RPC Context.
-        :param zone_export: Zone Export to update.
-        """
-
-    @abc.abstractmethod
-    def delete_zone_export(self, context, zone_export_id):
-        """
-        Delete a Zone Export via ID.
-
-        :param context: RPC Context.
-        :param zone_export_id: Delete a Zone Export via ID
-        """
-
     def ping(self, context):
-        """Ping the Storage connection"""
+        """ Ping the Storage connection """
         return {
             'status': None
         }
