@@ -727,7 +727,7 @@ class SQLAlchemyStorage(base.Storage):
                          marker=None, limit=None, sort_key=None,
                          sort_dir=None):
         try:
-            return self._find(models.RecordSet, context, criterion, one=one,
+            return self._find_customr(models.RecordSet, context, criterion, one=one,
                               marker=marker, limit=limit, sort_key=sort_key,
                               sort_dir=sort_dir)
         except exceptions.NotFound:
@@ -800,7 +800,7 @@ class SQLAlchemyStorage(base.Storage):
     def _find_records(self, context, criterion, one=False,
                       marker=None, limit=None, sort_key=None, sort_dir=None):
         try:
-            return self._find(models.Record, context, criterion, one=one,
+            return self._find_customr(models.Record, context, criterion, one=one,
                               marker=marker, limit=limit, sort_key=sort_key,
                               sort_dir=sort_dir)
         except exceptions.NotFound:
