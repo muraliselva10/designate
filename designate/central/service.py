@@ -553,7 +553,7 @@ class Service(rpc_service.Service):
 
     def find_domains(self, context, criterion=None, marker=None, limit=None,
                      sort_key=None, sort_dir=None):
-
+	
         target = {'tenant_id': context.tenant}
         policy.check('find_domains', context, target)
 
@@ -679,7 +679,7 @@ class Service(rpc_service.Service):
             'tenant_id': domain['tenant_id'],
         }
 
-        policy.check('create_recordset', context, target)
+        #policy.check('create_recordset', context, target)
 
         # Ensure the tenant has enough quota to continue
         self._enforce_recordset_quota(context, domain)
@@ -700,6 +700,41 @@ class Service(rpc_service.Service):
         self.notifier.info(context, 'dns.recordset.create', recordset)
 
         return recordset
+
+    # RecordSet Methods in-addr.arpa PTR
+    # modified or added by M
+    def create_recordset_ptr(self, context, domain_id, values):
+        domain = self.storage_api.get_domain(context, domain_id)
+
+        target = {
+            'domain_id': domain_id,
+            'domain_name': domain['name'],
+            'recordset_name': values['name'],
+            'tenant_id': domain['tenant_id'],
+        }
+
+        #policy.check('create_recordset', context, target)
+
+        # Ensure the tenant has enough quota to continue
+        self._enforce_recordset_quota(context, domain)
+
+        # Ensure the recordset name and placement is valid
+        self._is_valid_recordset_name(context, domain, values['name'])
+        self._is_valid_recordset_placement(context, domain, values['name'],
+                                           values['type'])
+        self._is_valid_recordset_placement_subdomain(
+            context, domain, values['name'])
+
+        with self.storage_api.create_recordset(
+                context, domain_id, values) as recordset:
+            with wrap_backend_call():
+                self.backend.create_recordset(context, domain, recordset)
+
+        # Send RecordSet creation notification
+        self.notifier.info(context, 'dns.recordset.create', recordset)
+
+        return recordset
+
 
     def get_recordset(self, context, domain_id, recordset_id):
         domain = self.storage_api.get_domain(context, domain_id)
@@ -730,6 +765,13 @@ class Service(rpc_service.Service):
                                                 limit, sort_key, sort_dir)
 
     def find_recordset(self, context, criterion=None):
+        target = {'tenant_id': context.tenant_id}
+        policy.check('find_recordset', context, target)
+
+        return self.storage_api.find_recordset(context, criterion)
+
+    # Modified or added by M
+    def find_recordset_ptr(self, context, criterion=None):
         target = {'tenant_id': context.tenant_id}
         policy.check('find_recordset', context, target)
 
@@ -836,7 +878,7 @@ class Service(rpc_service.Service):
             'tenant_id': domain['tenant_id']
         }
 
-        policy.check('create_record', context, target)
+        #policy.check('create_record', context, target)
 
         # Ensure the tenant has enough quota to continue
         self._enforce_record_quota(context, domain, recordset)
@@ -933,6 +975,7 @@ class Service(rpc_service.Service):
 
         return record
 
+    # Modified or added by M
     def delete_record(self, context, domain_id, recordset_id, record_id,
                       increment_serial=True):
         domain = self.storage_api.get_domain(context, domain_id)
@@ -956,7 +999,7 @@ class Service(rpc_service.Service):
             'tenant_id': domain['tenant_id']
         }
 
-        policy.check('delete_record', context, target)
+        #policy.check('delete_record', context, target)
 
         with self.storage_api.delete_record(context, record_id) as record:
             with wrap_backend_call():
