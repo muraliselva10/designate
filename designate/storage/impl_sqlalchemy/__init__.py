@@ -98,7 +98,6 @@ class SQLAlchemyStorage(base.Storage):
             if context.all_tenants:
                 LOG.debug('Including all tenants items in query results')
             else:
-		LOG.info("thi sis unwanted one")
                 query = query.filter(model.tenant_id == context.tenant_id)
 
         return query
@@ -312,7 +311,6 @@ class SQLAlchemyStorage(base.Storage):
         Used to abstract these details from all the _find_*() methods.
         """
 
-	LOG.info("Should not be here")
         # First up, create a query and apply the various filters
         query = self.session.query(model)
         query = self._apply_criterion(model, query, criterion)
@@ -620,7 +618,7 @@ class SQLAlchemyStorage(base.Storage):
     def _find_domains(self, context, criterion, one=False,
                       marker=None, limit=None, sort_key=None, sort_dir=None):
         try:
-            return self._find_customr(models.Domain, context, criterion, one=one,
+            return self._find(models.Domain, context, criterion, one=one,
                               marker=marker, limit=limit, sort_key=sort_key,
                               sort_dir=sort_dir)
         except exceptions.NotFound:
@@ -670,7 +668,7 @@ class SQLAlchemyStorage(base.Storage):
         return dict(domain)
 
     # modified or added by M
-    def get_domain_custom(self, context, domain_id):
+    def get_domain_ptr(self, context, domain_id):
         domain = self._find_domains_for_record_custom(context, {'id': domain_id}, one=True)
 
         return dict(domain)
@@ -709,6 +707,19 @@ class SQLAlchemyStorage(base.Storage):
 
         return dict(domain)
 
+    def update_domain_ptr(self, context, domain_id, values):
+        domain = self._find_domains_for_record_custom(context, {'id': domain_id}, one=True)
+
+        domain.update(values)
+
+        try:
+            domain.save(self.session)
+        except exceptions.Duplicate:
+            raise exceptions.DuplicateDomain()
+
+        return dict(domain)
+
+
     def delete_domain(self, context, domain_id):
         domain = self._find_domains(context, {'id': domain_id}, one=True)
 
@@ -730,11 +741,24 @@ class SQLAlchemyStorage(base.Storage):
                          marker=None, limit=None, sort_key=None,
                          sort_dir=None):
         try:
+            return self._find(models.RecordSet, context, criterion, one=one,
+                              marker=marker, limit=limit, sort_key=sort_key,
+                              sort_dir=sort_dir)
+        except exceptions.NotFound:
+            raise exceptions.RecordSetNotFound()
+
+    # Modified or added by M
+    # RecordSet Methods
+    def _find_recordsets_custom(self, context, criterion, one=False,
+                         marker=None, limit=None, sort_key=None,
+                         sort_dir=None):
+        try:
             return self._find_customr(models.RecordSet, context, criterion, one=one,
                               marker=marker, limit=limit, sort_key=sort_key,
                               sort_dir=sort_dir)
         except exceptions.NotFound:
             raise exceptions.RecordSetNotFound()
+
 
     def create_recordset(self, context, domain_id, values):
         # Fetch the domain as we need the tenant_id
@@ -753,11 +777,38 @@ class SQLAlchemyStorage(base.Storage):
 
         return dict(recordset)
 
+    # modified or added by M
+    def create_recordset_ptr(self, context, domain_id, values):
+        # Fetch the domain as we need the tenant_id
+        domain = self._find_domains_for_record_custom(context, {'id': domain_id}, one=True)
+
+        recordset = models.RecordSet()
+
+        recordset.update(values)
+        recordset.tenant_id = domain['tenant_id']
+        recordset.domain_id = domain_id
+
+        try:
+            recordset.save(self.session)
+        except exceptions.Duplicate:
+            raise exceptions.DuplicateRecordSet()
+
+        return dict(recordset)
+
+
     def get_recordset(self, context, recordset_id):
         recordset = self._find_recordsets(context, {'id': recordset_id},
                                           one=True)
 
         return dict(recordset)
+
+    # modified or added by M
+    def get_recordset_custom(self, context, recordset_id):
+        recordset = self._find_recordsets_custom(context, {'id': recordset_id},
+                                          one=True)
+
+        return dict(recordset)
+
 
     def find_recordsets(self, context, criterion=None,
                         marker=None, limit=None, sort_key=None, sort_dir=None):
@@ -804,7 +855,7 @@ class SQLAlchemyStorage(base.Storage):
     def _find_records(self, context, criterion, one=False,
                       marker=None, limit=None, sort_key=None, sort_dir=None):
         try:
-            return self._find_customr(models.Record, context, criterion, one=one,
+            return self._find(models.Record, context, criterion, one=one,
                               marker=marker, limit=limit, sort_key=sort_key,
                               sort_dir=sort_dir)
         except exceptions.NotFound:
@@ -812,7 +863,7 @@ class SQLAlchemyStorage(base.Storage):
 
     def create_record(self, context, domain_id, recordset_id, values):
         # Fetch the domain as we need the tenant_id
-        domain = self._find_domains_for_record_custom(context, {'id': domain_id}, one=True)
+        domain = self._find_domains(context, {'id': domain_id}, one=True)
 
         record = models.Record()
 
@@ -831,9 +882,9 @@ class SQLAlchemyStorage(base.Storage):
 
         return dict(record)
 
-    def create_recordi_ptr(self, context, domain_id, recordset_id, values):
+    def create_record_ptr(self, context, domain_id, recordset_id, values):
         # Fetch the domain as we need the tenant_id
-        domain = self._find_domains(context, {'id': domain_id}, one=True)
+        domain = self._find_domains_for_record_custom(context, {'id': domain_id}, one=True)
 
         record = models.Record()
 
