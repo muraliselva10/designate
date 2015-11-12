@@ -35,12 +35,37 @@ def _find_recordset(context, domain_id, name, type):
         'type': type,
     })
 
+# modified or added by M
+def _find_recordset_ptr(context, domain_id, name, type):
+
+    LOG.info("find recordset ptr")
+    return central_api.find_recordset_ptr(context, {
+        'domain_id': domain_id,
+        'name': name,
+        'type': type,
+    })
 
 def _find_or_create_recordset(context, domain_id, name, type, ttl):
     try:
         recordset = _find_recordset(context, domain_id, name, type)
     except exceptions.RecordSetNotFound:
         recordset = central_api.create_recordset(context, domain_id, {
+            'name': name,
+            'type': type,
+            'ttl': ttl,
+        })
+
+    return recordset
+
+# modified or added by M
+def _find_or_create_recordset_ptr(context, domain_id, name, type, ttl):
+    LOG.info("inside function fcptr")
+    try:
+	LOG.info("inside function fcptra")
+        recordset = _find_recordset_ptr(context, domain_id, name, type)
+    except exceptions.RecordSetNotFound:
+	LOG.info("insider fucntions fcptr create")
+        recordset = central_api.create_recordset_ptr(context, domain_id, {
             'name': name,
             'type': type,
             'ttl': ttl,
@@ -93,35 +118,51 @@ def reverse(ip):
         l = ip.split('.')
         return '.'.join(l[::-1])
 
+# modified or added by M
 @blueprint.route('/domains/<uuid:domain_id>/records', methods=['POST'])
 def create_record(domain_id):
     context = flask.request.environ.get('context')
     values = flask.request.json
 
     if "in-addr.arpa" in values['name'] and "PTR" in values['type']:
+	LOG.info("MAMS sothapiduchu")
         nameField = values['name']
-        nameField = str(nameField)
-        ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', nameField )
-        ip = ''.join(ip)
-        ip_reversed = reverse(ip)
+	nameField = str(nameField)
+	ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', nameField )
+	ip = ''.join(ip)
+	ip_reversed = reverse(ip)	
+    	recordset = _find_or_create_recordset_ptr(context,
+                                              domain_id,
+                                              values['name'],
+                                              values['type'],
+                                              values.get('ttl', None))
 
-    record_schema.validate(values)
-
-    recordset = _find_or_create_recordset(context,
-                                          domain_id,
-                                          values['name'],
-                                          values['type'],
-                                          values.get('ttl', None))
-
-    record = central_api.create_record(context, domain_id, recordset['id'],
+    	record = central_api.create_record_ptr(context, domain_id, recordset['id'],
                                        _extract_record_values(values))
 
-    record = _format_record_v1(record, recordset)
+    	record = _format_record_v1(record, recordset)
 
-    response = flask.jsonify(record_schema.filter(record))
-    response.status_int = 201
-    response.location = flask.url_for('.get_record', domain_id=domain_id,
-                                      record_id=record['id'])
+    	response = flask.jsonify(record_schema.filter(record))
+    	response.status_int = 201
+    	response.location = flask.url_for('.get_record', domain_id=domain_id,
+                                      	  record_id=record['id'])
+    else:
+	LOG.info("MAMS inder else")
+	recordset = _find_or_create_recordset(context,
+                                              domain_id,
+                                              values['name'],
+                                              values['type'],
+                                              values.get('ttl', None))
+
+        record = central_api.create_record(context, domain_id, recordset['id'],
+                                       _extract_record_values(values))
+
+        record = _format_record_v1(record, recordset)
+
+        response = flask.jsonify(record_schema.filter(record))
+        response.status_int = 201
+        response.location = flask.url_for('.get_record', domain_id=domain_id,
+                                          record_id=record['id'])
 
     return response
 
