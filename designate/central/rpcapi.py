@@ -176,6 +176,14 @@ class CentralAPI(rpc_proxy.RpcProxy):
 
         return self.call(context, msg)
 
+    # modified or added by M
+    def get_domain_facil(self, context, domain_id):
+        LOG.info("get_domain_facil: Calling central's get_domain.")
+        msg = self.make_msg('get_domain_facil', domain_id=domain_id)
+
+        return self.call(context, msg)
+
+
     def get_domain_servers(self, context, domain_id):
         LOG.info("get_domain_servers: Calling central's get_domain_servers.")
         msg = self.make_msg('get_domain_servers', domain_id=domain_id)
@@ -301,6 +309,17 @@ class CentralAPI(rpc_proxy.RpcProxy):
 
         return self.call(context, msg)
 
+    # Modified or added by M
+    def find_recordsets_facil(self, context, criterion=None, marker=None, limit=None,
+                        sort_key=None, sort_dir=None):
+        LOG.info("find_recordsets_facil: Calling central's find_recordsets.")
+        msg = self.make_msg('find_recordsets_facil', criterion=criterion,
+                            marker=marker, limit=limit, sort_key=sort_key,
+                            sort_dir=sort_dir)
+
+        return self.call(context, msg)
+
+
     def find_recordset(self, context, criterion=None):
         LOG.info("find_recordset: Calling central's find_recordset.")
         msg = self.make_msg('find_recordset', criterion=criterion)
@@ -383,6 +402,16 @@ class CentralAPI(rpc_proxy.RpcProxy):
                             limit=limit, sort_key=sort_key, sort_dir=sort_dir)
 
         return self.call(context, msg)
+
+    # modified or added by M
+    def find_records_facil(self, context, criterion=None, marker=None, limit=None,
+                     sort_key=None, sort_dir=None):
+        LOG.info("find_records_facil: Calling central's find_records.")
+        msg = self.make_msg('find_records_facil', criterion=criterion, marker=marker,
+                            limit=limit, sort_key=sort_key, sort_dir=sort_dir)
+
+        return self.call(context, msg)
+
 
     def find_record(self, context, criterion=None):
         LOG.info("find_record: Calling central's find_record.")
