@@ -129,16 +129,17 @@ def create_record(domain_id):
     context = flask.request.environ.get('context')
     values = flask.request.json
 
+    # For PTR and in-addr.arpa only
     if "in-addr.arpa" in values['name'] and "PTR" in values['type']:
         nameField = values['name']
 	nameField = str(nameField)
 	ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', nameField )
 	ip = ''.join(ip)
+	
+	# Getting IP in correct format
 	ip_reversed = reverse(ip)
 
-        LOG.info("IP from request")
-	LOG.info(ip_reversed)
-
+	# input file flat text
 	files = open("/root/flattext", "r")
 
         # create an empty list
@@ -161,6 +162,7 @@ def create_record(domain_id):
         # cleanup and close files
         files.close()
 
+	# If IP value from text file and request matches
 	if ip_reversed in ip_valuess:	
     		recordset = _find_or_create_recordset_ptr(context,
                                               		domain_id,
@@ -177,6 +179,7 @@ def create_record(domain_id):
     		response.status_int = 201
     		response.location = flask.url_for('.get_record', domain_id=domain_id,
                                       	  	record_id=record['id'])
+    # For reocrds rather than PTR 
     else:
 	recordset = _find_or_create_recordset(context,
                                               domain_id,
