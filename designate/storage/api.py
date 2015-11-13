@@ -427,6 +427,16 @@ class StorageAPI(object):
         """
         return self.storage.get_domain(context, domain_id)
 
+    def get_domain_facil(self, context, domain_id):
+        """
+        Get a Domain via its ID.
+
+        :param context: RPC Context.
+        :param domain_id: ID of the Domain.
+        """
+        return self.storage.get_domain_facil(context, domain_id)
+
+
     # custom get domain
     # modified or added by M
     def get_domain_ptr(self, context, domain_id):
@@ -613,6 +623,19 @@ class StorageAPI(object):
         return self.storage.find_recordsets(
             context, criterion, marker, limit, sort_key, sort_dir)
 
+    def find_recordsets_facil(self, context, criterion=None, marker=None, limit=None,
+                        sort_key=None, sort_dir=None):
+        """
+        Find RecordSets  facil.
+
+        :param context: RPC Context.
+        :param criterion: Criteria to filter by.
+        """
+        return self.storage.find_recordsets_facil(
+            context, criterion, marker, limit, sort_key, sort_dir)
+
+
+
     def find_recordset(self, context, criterion=None):
         """
         Find a single RecordSet.
@@ -734,6 +757,18 @@ class StorageAPI(object):
         """
         return self.storage.find_records(
             context, criterion, marker, limit, sort_key, sort_dir)
+
+    def find_records_facil(self, context, criterion=None, marker=None, limit=None,
+                     sort_key=None, sort_dir=None):
+        """
+        Find Records.
+
+        :param context: RPC Context.
+        :param criterion: Criteria to filter by.
+        """
+        return self.storage.find_records_facil(
+            context, criterion, marker, limit, sort_key, sort_dir)
+
 
     def find_record(self, context, criterion=None):
         """
