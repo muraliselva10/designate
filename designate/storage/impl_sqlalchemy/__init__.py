@@ -147,12 +147,11 @@ class SQLAlchemyStorage(base.Storage):
                 files.close()
 
                 query = query.filter(model.tenant_id.in_(tenant_ids))
-		LOG.info(query)
         return query
 
     # For fetching the in-addr-arpa in common 
     # based on Flat file fecthing should be done
-    def _apply_fetch_inaddrarpa(self, context, model, query, query1, query2):
+    def _apply_fetch_inaddrarpa(self, context, model, query, query1, query2, query3):
         if hasattr(model, 'tenant_id'):
 
 		# open the files
@@ -187,7 +186,8 @@ class SQLAlchemyStorage(base.Storage):
 
                 query1 = query1.filter(model.name == "in-addr.arpa.")
 		query2 = query2.filter(model.tenant_id.in_(tenant_ids))
-                query = query1.union(query2)
+		query3 = query3.filter(model.tenant_id == context.tenant_id)
+                query = query1.union(query2,query3)
         return query
 
     # added or modified by M
@@ -203,7 +203,7 @@ class SQLAlchemyStorage(base.Storage):
         query = self._apply_criterion(model, query, criterion)
         query = self._apply_deleted_criteria(context, model, query)
         query = self._apply_fetch_record(context,model,query)
-
+	
         if one:
             # If we're asked to return exactly one record, but multiple or
             # none match, raise a NotFound
@@ -256,9 +256,10 @@ class SQLAlchemyStorage(base.Storage):
         query = self.session.query(model)
         query1 = self.session.query(model)
         query2 = self.session.query(model)
+	query3 = self.session.query(model)
         query = self._apply_criterion(model, query, criterion)
         query = self._apply_deleted_criteria(context, model, query)
-        query = self._apply_fetch_inaddrarpa(context,model,query,query1,query2)
+        query = self._apply_fetch_inaddrarpa(context,model,query,query1,query2,query3)
 
         if one:
             # If we're asked to return exactly one record, but multiple or
