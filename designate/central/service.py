@@ -549,6 +549,19 @@ class Service(rpc_service.Service):
 
         return domain
 
+    # modified or added by M
+    def get_domain_facil(self, context, domain_id):
+        domain = self.storage_api.get_domain_facil(context, domain_id)
+
+        target = {
+            'domain_id': domain_id,
+            'domain_name': domain['name'],
+            'tenant_id': domain['tenant_id']
+        }
+        #policy.check('get_domain', context, target)
+
+        return domain
+
     def get_domain_servers(self, context, domain_id, criterion=None):
         domain = self.storage_api.get_domain(context, domain_id)
 
@@ -769,14 +782,20 @@ class Service(rpc_service.Service):
 
         return recordset
 
-    # Modified or added by M
     def find_recordsets(self, context, criterion=None, marker=None, limit=None,
                         sort_key=None, sort_dir=None):
-        #target = {'tenant_id': context.tenant_id}
-        #policy.check('find_recordsets', context, target)
-
+        target = {'tenant_id': context.tenant_id}
+        policy.check('find_recordsets', context, target)
+	LOG.info("Y I am here")
         return self.storage_api.find_recordsets(context, criterion, marker,
                                                 limit, sort_key, sort_dir)
+
+    def find_recordsets_facil(self, context, criterion=None, marker=None, limit=None,
+                        sort_key=None, sort_dir=None):
+
+        return self.storage_api.find_recordsets_facil(context, criterion, marker,
+                                                limit, sort_key, sort_dir)
+
 
     def find_recordset(self, context, criterion=None):
         target = {'tenant_id': context.tenant_id}
@@ -969,9 +988,15 @@ class Service(rpc_service.Service):
                      sort_key=None, sort_dir=None):
         target = {'tenant_id': context.tenant_id}
         policy.check('find_records', context, target)
-
         return self.storage_api.find_records(context, criterion, marker, limit,
                                              sort_key, sort_dir)
+
+    def find_records_facil(self, context, criterion=None, marker=None, limit=None,
+                     sort_key=None, sort_dir=None):
+
+        return self.storage_api.find_records_facil(context, criterion, marker, limit,
+                                             sort_key, sort_dir)
+
 
     def find_record(self, context, criterion=None):
         target = {'tenant_id': context.tenant_id}
