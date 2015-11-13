@@ -302,6 +302,14 @@ class Storage(DriverPlugin):
         :param domain_id: ID of the Domain.
         """
 
+    def get_domain_facil(self, context, domain_id):
+        """
+        Get a Domain via its ID.
+
+        :param context: RPC Context.
+        :param domain_id: ID of the Domain.
+	"""
+
     @abc.abstractmethod
     def find_domains(self, context, criterion=None, marker=None,
                      limit=None, sort_key=None, sort_dir=None):
@@ -473,6 +481,23 @@ class Storage(DriverPlugin):
         :param sort_key: Key from which to sort after.
         :param sort_dir: Direction to sort after using sort_key.
         """
+
+    @abc.abstractmethod
+    def find_records_facil(self, context, criterion=None, marker=None,
+                     limit=None, sort_key=None, sort_dir=None):
+        """
+        Find Records.
+
+        :param context: RPC Context.
+        :param criterion: Criteria to filter by.
+        :param marker: Resource ID from which after the requested page will
+                       start after
+        :param limit: Integer limit of objects of the page size after the
+                      marker
+        :param sort_key: Key from which to sort after.
+        :param sort_dir: Direction to sort after using sort_key.
+        """
+
 
     @abc.abstractmethod
     def find_record(self, context, criterion):
