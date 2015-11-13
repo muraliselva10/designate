@@ -203,9 +203,6 @@ class SQLAlchemyStorage(base.Storage):
         query = self._apply_criterion(model, query, criterion)
         query = self._apply_deleted_criteria(context, model, query)
         query = self._apply_fetch_record(context,model,query)
-	
-	LOG.info('kokka makka')
-	LOG.info(str(query))
 
         if one:
             # If we're asked to return exactly one record, but multiple or
@@ -673,6 +670,12 @@ class SQLAlchemyStorage(base.Storage):
 
         return dict(domain)
 
+    # modified or added by M
+    def get_domain_facil(self, context, domain_id):
+        domain = self._find_domains_for_record_custom(context, {'id': domain_id}, one=True)
+
+        return dict(domain)
+
 
     def find_domains(self, context, criterion=None,
                      marker=None, limit=None, sort_key=None, sort_dir=None):
@@ -759,6 +762,18 @@ class SQLAlchemyStorage(base.Storage):
         except exceptions.NotFound:
             raise exceptions.RecordSetNotFound()
 
+    # Modified or added by M
+    # RecordSet Methods
+    def _find_recordsets_facil(self, context, criterion, one=False,
+                         marker=None, limit=None, sort_key=None,
+                         sort_dir=None):
+        try:
+            return self._find_customr(models.RecordSet, context, criterion, one=one,
+                              marker=marker, limit=limit, sort_key=sort_key,
+                              sort_dir=sort_dir)
+        except exceptions.NotFound:
+            raise exceptions.RecordSetNotFound()
+
 
     def create_recordset(self, context, domain_id, values):
         # Fetch the domain as we need the tenant_id
@@ -818,6 +833,15 @@ class SQLAlchemyStorage(base.Storage):
 
         return [dict(r) for r in recordsets]
 
+    def find_recordsets_facil(self, context, criterion=None,
+                        marker=None, limit=None, sort_key=None, sort_dir=None):
+        recordsets = self._find_recordsets_facil(
+            context, criterion, marker=marker, limit=limit, sort_key=sort_key,
+            sort_dir=sort_dir)
+
+        return [dict(r) for r in recordsets]
+
+
     def find_recordset(self, context, criterion):
         recordset = self._find_recordsets(context, criterion, one=True)
 
@@ -850,7 +874,6 @@ class SQLAlchemyStorage(base.Storage):
 
         return query.count()
 
-    # Modified or added by M
     # Record Methods
     def _find_records(self, context, criterion, one=False,
                       marker=None, limit=None, sort_key=None, sort_dir=None):
@@ -860,6 +883,16 @@ class SQLAlchemyStorage(base.Storage):
                               sort_dir=sort_dir)
         except exceptions.NotFound:
             raise exceptions.RecordNotFound()
+
+    def _find_records_facil(self, context, criterion, one=False,
+                      marker=None, limit=None, sort_key=None, sort_dir=None):
+        try:
+            return self._find_customr(models.Record, context, criterion, one=one,
+                              marker=marker, limit=limit, sort_key=sort_key,
+                              sort_dir=sort_dir)
+        except exceptions.NotFound:
+            raise exceptions.RecordNotFound()
+
 
     def create_record(self, context, domain_id, recordset_id, values):
         # Fetch the domain as we need the tenant_id
@@ -902,6 +935,7 @@ class SQLAlchemyStorage(base.Storage):
             raise exceptions.DuplicateRecord()
 
         return dict(record)
+
     def find_records(self, context, criterion=None,
                      marker=None, limit=None, sort_key=None, sort_dir=None):
         records = self._find_records(
@@ -909,6 +943,16 @@ class SQLAlchemyStorage(base.Storage):
             sort_dir=sort_dir)
 
         return [dict(r) for r in records]
+
+    def find_records_facil(self, context, criterion=None,
+                     marker=None, limit=None, sort_key=None, sort_dir=None):
+        records = self._find_records_facil(
+            context, criterion, marker=marker, limit=limit, sort_key=sort_key,
+            sort_dir=sort_dir)
+
+        return [dict(r) for r in records]
+
+
 
     def get_record(self, context, record_id):
         record = self._find_records(context, {'id': record_id}, one=True)
