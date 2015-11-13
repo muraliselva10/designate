@@ -101,6 +101,14 @@ def _fetch_domain_recordsets(context, domain_id):
 
     return dict((r['id'], r) for r in recordsets)
 
+# modified or added by M
+def _fetch_domain_recordsets_facil(context, domain_id):
+    criterion = {'domain_id': domain_id}
+
+    recordsets = central_api.find_recordsets_facil(context, criterion)
+
+    return dict((r['id'], r) for r in recordsets)
+
 
 @blueprint.route('/schemas/record', methods=['GET'])
 def get_record_schema():
@@ -111,6 +119,7 @@ def get_record_schema():
 def get_records_schema():
     return flask.jsonify(records_schema.raw)
 
+# modified or added by M
 # Function for reversing IP string
 def reverse(ip):
         if len(ip) <= 1:
@@ -125,7 +134,6 @@ def create_record(domain_id):
     values = flask.request.json
 
     if "in-addr.arpa" in values['name'] and "PTR" in values['type']:
-	LOG.info("MAMS sothapiduchu")
         nameField = values['name']
 	nameField = str(nameField)
 	ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', nameField )
@@ -147,7 +155,6 @@ def create_record(domain_id):
     	response.location = flask.url_for('.get_record', domain_id=domain_id,
                                       	  record_id=record['id'])
     else:
-	LOG.info("MAMS inder else")
 	recordset = _find_or_create_recordset(context,
                                               domain_id,
                                               values['name'],
@@ -166,27 +173,26 @@ def create_record(domain_id):
 
     return response
 
-
+# modified or added by M
 @blueprint.route('/domains/<uuid:domain_id>/records', methods=['GET'])
 def get_records(domain_id):
     context = flask.request.environ.get('context')
 
     # NOTE: We need to ensure the domain actually exists, otherwise we may
     #       return an empty records array instead of a domain not found
-    central_api.get_domain(context, domain_id)
+    central_api.get_domain_facil(context, domain_id)
 
-    records = central_api.find_records(context, {'domain_id': domain_id})
+    records = central_api.find_records_facil(context, {'domain_id': domain_id})
 
-    recordsets = _fetch_domain_recordsets(context, domain_id)
+    recordsets = _fetch_domain_recordsets_facil(context, domain_id)
 
     def _inner(record):
         recordset = recordsets[record['recordset_id']]
-        return _format_record_v1(record, recordset)
+	return _format_record_v1(record, recordset)
 
     records = [_inner(r) for r in records]
 
     return flask.jsonify(records_schema.filter({'records': records}))
-
 
 @blueprint.route('/domains/<uuid:domain_id>/records/<uuid:record_id>',
                  methods=['GET'])
